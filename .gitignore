@@ -1,0 +1,11 @@
+/.claude
+/.determinism
+/menace_data
+/menace_reports
+/resources/mscroggs-menace/.git
+/results
+/target
+/thesis.qmd
+/thesis_results_*.zip
+/context*.xml
+__pycache__
