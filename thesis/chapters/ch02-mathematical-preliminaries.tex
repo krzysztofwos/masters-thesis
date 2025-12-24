@@ -1,0 +1,171 @@
+\chapter{Mathematical Preliminaries}
+\label{ch:mathematical-preliminaries}
+
+This chapter establishes the notation, information-theoretic quantities, and conjugacy results used throughout the thesis. The focus is on Dirichlet--categorical structure because it underpins both MENACE's bead mechanics and the expected free energy decomposition used in later chapters. Definitions appear before use, with short notes on how each concept is applied in the analysis.
+
+\section{Notation and Conventions}
+
+We adopt the conventions listed in Table~\ref{tab:notation}. Random variables use uppercase letters, their realisations lowercase; expectations explicitly name the distribution (e.g., $\E_q[\cdot]$). We use $p(\cdot)$ for generative-model and preference distributions, and $q(\cdot)$ for predictive or posterior beliefs. Dirichlet concentration parameters are denoted $\alpha$, categorical parameters $\theta$, and policies $\pi$; the preference vector is $C$.
+
+\begin{table}[htbp]
+	\caption{Notation and symbols used throughout the thesis.}
+	\label{tab:notation}
+	\centering
+	\begin{tabular}{@{}ll@{}}
+		\toprule
+		Symbol                                           & Meaning (domain)                                                    \\
+		\midrule
+		$o \in \{\text{win}, \text{draw}, \text{loss}\}$ & Terminal outcome from the agent's perspective                       \\
+		$s \in S$, $a \in A(s)$                          & Board state and legal action in that state                          \\
+		$p(o\mid C)$                                     & Preference distribution over terminal outcomes                      \\
+		$q(o\mid\pi)$                                    & Predicted outcome distribution under policy $\pi$                   \\
+		$\alpha, \alpha_{s,a}$                           & Dirichlet concentration (global; per-state/action bead counts)      \\
+		$\theta$                                         & Categorical parameter vector ($\sum_i \theta_i = 1$)                \\
+		$\pi$                                            & Policy (action distribution or sequence)                            \\
+		$H[\cdot]$                                       & Entropy of a distribution                                           \\
+		$I(\cdot;\cdot)$                                 & Mutual information between random variables                         \\
+		$\beta_{\mathrm{amb}}$                           & Outcome-ambiguity weight on $H[q(o\mid\pi)]$ (set to 0 in Part~III) \\
+		$\lambda$                                        & Epistemic-weight coefficient in expected free energy                \\
+		$\lambda_{\mathrm{policy}}$                      & Policy softmax temperature (CLI: \texttt{--policy-lambda})          \\
+		\bottomrule
+	\end{tabular}
+\end{table}
+
+Conventions: (i) $q(\cdot)$ vs.\ $p(\cdot)$ as above; (ii) Dirichlet concentration totals are $\alpha_0 = \sum_i \alpha_i$; (iii) preferences $C$ are normalised such that $p(o\mid C)$ is a categorical distribution; (iv) when indexing state-specific parameters, we use double subscripts (e.g., $\alpha_{s,a}$); (v) all Tic-Tac-Toe counts refer to canonical, symmetry-reduced states unless stated otherwise; (vi) X moves first; MENACE is X; (vii) outcome vectors are ordered (win, draw, loss) throughout; (viii) logarithms are natural (information measured in nats).
+
+\section{Information Measures}
+
+\paragraph{Entropy.} Entropy quantifies the expected surprisal of a discrete distribution. For categorical $p(x)$,
+
+\begin{equation}
+	H[p] = -\sum_x p(x)\ln p(x).
+\end{equation}
+
+\emph{How we use it.} Entropy measures predictive uncertainty (e.g., over terminal outcomes) and appears in both the expected free energy decomposition and the Dirichlet--categorical uncertainty analysis.
+
+\paragraph{Mutual information.} Mutual information measures how much knowing one variable reduces uncertainty about another:
+
+\begin{equation}
+	I(X;Y) = H[X] - H[X\mid Y].
+\end{equation}
+
+\emph{How we use it.} The epistemic term $I(o;\theta)$ quantifies expected information gain about Dirichlet parameters from observing outcomes, providing the explicit epistemic-value term in the expected free energy objective.
+
+\section{Dirichlet Distributions and Categorical Conjugacy}
+
+In the study of discrete probability distributions, the Dirichlet distribution occupies a position of central importance analogous to that of the Gaussian distribution in continuous settings. Just as the Gaussian serves as the conjugate prior for the mean of another Gaussian, the Dirichlet distribution serves as the conjugate prior for the parameters of a categorical distribution. This conjugacy relationship is what makes Bayesian inference tractable in discrete settings and, as we shall demonstrate, is implicitly exploited by MENACE's learning mechanism.
+
+To develop this theory properly, we must first establish notation and fundamental concepts. Consider a discrete random variable that can take one of $k$ distinct values. The probability of observing each value is governed by a categorical distribution with parameter vector $\theta = (\theta_1, \ldots, \theta_k)$, where $\theta_i$ represents the probability of outcome $i$. These parameters must satisfy the constraints $\theta_i \geq 0$ for all $i$ and $\sum_{i=1}^k \theta_i = 1$, defining what is known as the $(k-1)$-dimensional probability simplex $\Delta^{k-1}$.
+
+The challenge in Bayesian inference is to maintain and update beliefs about these unknown probabilities $\theta$ as we observe data. The Dirichlet distribution provides an elegant solution to this challenge, serving as a probability distribution over probability distributions---a concept that may seem abstract but proves remarkably natural in practice.
+
+\begin{definition}[Dirichlet Distribution]
+	\label{def:dirichlet}
+	A random vector $\theta = (\theta_1, \ldots, \theta_k)$ follows a Dirichlet distribution with parameters $\alpha = (\alpha_1, \ldots, \alpha_k)$, denoted $\theta \sim \Dir(\alpha)$, if its probability density function is:
+
+	\begin{equation}
+		p(\theta|\alpha) = \frac{1}{B(\alpha)} \prod_{i=1}^{k} \theta_i^{\alpha_i-1}
+	\end{equation}
+
+	where $\theta_i \geq 0$, $\sum_i \theta_i = 1$, $\alpha_i > 0$, and $B(\alpha)$ is the multivariate beta function:
+
+	\begin{equation}
+		B(\alpha) = \frac{\prod_{i=1}^{k} \Gamma(\alpha_i)}{\Gamma(\sum_{i=1}^{k} \alpha_i)}
+	\end{equation}
+
+	The gamma function $\Gamma(z)$ is defined as:
+
+	\begin{equation}
+		\Gamma(z) = \int_0^\infty t^{z-1} e^{-t} dt
+	\end{equation}
+
+	for $z > 0$, with the property that $\Gamma(n) = (n-1)!$ for positive integers $n$. The normalising constant $B(\alpha)$ ensures that the density integrates to unity over the probability simplex; closed-form evaluation via gamma functions makes Bayesian inference tractable.
+\end{definition}
+
+The parameters $\alpha_i$ of the Dirichlet distribution have a remarkably intuitive interpretation: they can be thought of as pseudo-counts representing prior observations of each category. This interpretation becomes precise when we consider the expected value of the distribution: $\E_{\Dir(\alpha)}[\theta_i] = \alpha_i / \alpha_0$, where $\alpha_0 = \sum_{i=1}^k \alpha_i$ is the total pseudo-count. Thus, a Dirichlet distribution with parameters $(3, 2, 5)$ can be interpreted as encoding the belief arising from having previously observed 3 instances of category 1, 2 instances of category 2, and 5 instances of category 3.
+
+This count interpretation is not merely a convenient metaphor---it is fundamental to understanding how Bayesian updating works in discrete settings. When we observe new data, the posterior distribution remains Dirichlet with updated parameters that simply add the observed counts to the prior counts. This remarkable property is formalised in the following theorem:
+
+\emph{How we use it.} Bead counts in MENACE act as Dirichlet concentrations: pseudo-counts summarise past evidence and determine posterior-predictive action probabilities.
+
+\begin{theorem}[Conjugacy]
+	\label{thm:conjugacy}
+	If $\theta \sim \Dir(\alpha)$ and we observe $n$ categorical outcomes with $n_i$ occurrences of category $i$, then the posterior distribution is:
+
+	\begin{equation}
+		\theta|\text{data} \sim \Dir(\alpha + n)
+	\end{equation}
+
+	where $n = (n_1, \ldots, n_k)$.
+\end{theorem}
+
+\begin{proof}
+	By Bayes' theorem:
+	\begin{equation}
+		p(\theta|\text{data}) \propto p(\text{data}|\theta)p(\theta)
+	\end{equation}
+
+	For categorical likelihood:
+	\begin{equation}
+		p(\text{data}|\theta) = \prod_{i=1}^{k} \theta_i^{n_i}
+	\end{equation}
+
+	Therefore:
+	\begin{equation}
+		p(\theta|\text{data}) \propto \prod_{i=1}^{k} \theta_i^{n_i} \cdot \prod_{i=1}^{k} \theta_i^{\alpha_i-1} = \prod_{i=1}^{k} \theta_i^{\alpha_i+n_i-1}
+	\end{equation}
+
+	This is the kernel of $\Dir(\alpha + n)$, completing the proof.
+\end{proof}
+
+\emph{How we use it.} Conjugacy justifies the additive bead updates used throughout the thesis and enables the closed-form mutual information expressions referenced in later chapters.
+
+\section{Expected Values and Uncertainty}
+
+The conjugacy property established above provides computational tractability, but to understand how the Dirichlet distribution represents uncertainty about categorical probabilities, we must examine its moments and information-theoretic properties. These quantities will prove crucial in understanding how MENACE balances exploration and exploitation through its representation of uncertainty.
+
+For a Dirichlet distribution with parameters $\alpha$, the expected value of each component is given by a simple ratio:
+
+\begin{equation}
+	\E_{\Dir(\alpha)}[\theta_i] = \frac{\alpha_i}{\alpha_0}
+\end{equation}
+
+where $\alpha_0 = \sum_{i=1}^k \alpha_i$ is termed the concentration parameter or precision. This formula confirms our interpretation of the $\alpha_i$ as pseudo-counts: the expected probability of category $i$ is simply the proportion of counts (real or pseudo) allocated to that category.
+
+The variance of each component reveals how the concentration parameter controls uncertainty:
+
+\begin{equation}
+	\text{Var}[\theta_i] = \frac{\alpha_i(\alpha_0 - \alpha_i)}{\alpha_0^2(\alpha_0 + 1)}
+\end{equation}
+
+This expression has several noteworthy properties. First, the variance decreases as $O(1/\alpha_0)$ as we accumulate more observations, reflecting increasing confidence in our estimates. Second, for fixed $\alpha_0$, the variance is maximised when $\alpha_i = \alpha_0/2$, corresponding to maximum uncertainty about a binary outcome. Third, the factor $(\alpha_0 + 1)$ in the denominator arises from the additional uncertainty inherent in the Dirichlet distribution compared to a fixed categorical distribution. Note that under posterior-predictive probability matching (used by MENACE), selection probability depends on posterior mean proportions $\alpha_i/\alpha_0$, not on variance directly; what shrinks with experience is the effective learning rate (each update becomes a smaller fractional change to the proportions).
+
+To quantify the overall (predictive) uncertainty about the next outcome, we compute the entropy of the posterior-predictive categorical distribution:
+
+\begin{equation}
+	H[\text{Cat}(\E[\theta])] = -\sum_{i=1}^{k} \frac{\alpha_i}{\alpha_0} \ln \frac{\alpha_i}{\alpha_0}
+\end{equation}
+
+This quantity is the predictive entropy $H_{\text{pred}}$---the uncertainty over the next observation after marginalising out parameter uncertainty. It is useful to separate this predictive term into aleatoric and epistemic contributions. The expected (aleatoric) categorical entropy under the Dirichlet posterior is
+
+\begin{equation}
+	H_{\text{ale}}
+	= \E_{\theta\sim\Dir(\alpha)}\!\left[-\sum_i \theta_i \ln \theta_i\right]
+	= -\sum_i \frac{\alpha_i}{\alpha_0}\big(\psi(\alpha_i{+}1)-\psi(\alpha_0{+}1)\big),
+\end{equation}
+
+\noindent where $\psi(x) = \Gamma'(x)/\Gamma(x)$ is the digamma function (logarithmic derivative of the gamma function). The epistemic component is captured by the mutual information between future outcomes and the parameters:
+
+\begin{equation}
+	I(o;\theta)
+	\;=\; H_{\text{pred}} - H_{\text{ale}}
+	\;=\; \sum_i \frac{\alpha_i}{\alpha_0}\!\left[\psi(\alpha_i{+}1)-\psi(\alpha_0{+}1)-\ln\!\frac{\alpha_i}{\alpha_0}\right] \;\ge\; 0.
+\end{equation}
+
+Note that $H_{\text{pred}}$ depends only on the \emph{proportions} $\alpha_i/\alpha_0$: scaling $\alpha \mapsto c\alpha$ leaves $H_{\text{pred}}$ unchanged. What decreases with concentration is the \emph{epistemic} component $I(o;\theta)$. In the limit $\alpha_0 \to \infty$ (holding $\alpha_i/\alpha_0$ fixed), parameter uncertainty collapses, $I(o;\theta)\to 0$, and the expected categorical entropy $H_{\text{ale}}$ approaches the predictive entropy $H_{\text{pred}}$.
+
+The relationship between the Dirichlet parameters and uncertainty has profound implications for sequential decision-making. An agent maintaining Dirichlet beliefs naturally exhibits exploration behaviour: when counts are small, posterior uncertainty is large, which increases the probability of trying under-sampled actions under posterior sampling schemes. This uncertainty-driven exploration can be implemented through two related mechanisms: Thompson sampling~\cite{thompson1933likelihood,agrawal2012analysis}, where one samples parameters $\theta \sim \Dir(\alpha)$ then selects $a = \arg\max_i \theta_i$, or posterior-predictive probability matching, where actions are selected with probability $\alpha_i/\alpha_0$. Both approaches avoid hand-designed exploration schedules by tying exploration pressure to posterior uncertainty. As we shall see, MENACE implements the latter approach through its bead-drawing mechanism.
+
+\section{Summary}
+
+This chapter set the notation, information measures, and Dirichlet--categorical results that ground the rest of the thesis. The next chapter applies these tools to the Free Energy Principle, defining variational and expected free energy in the discrete setting we use for MENACE.

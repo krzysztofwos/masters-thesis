@@ -1,0 +1,142 @@
+\chapter{The Free Energy Principle for Discrete State Spaces}
+\label{ch:free-energy-principle}
+
+This chapter introduces the Free Energy Principle (FEP) and Active Inference in the discrete setting used throughout the thesis. We define variational free energy $F$ for inference, expected free energy $G$ for policy evaluation, and make explicit the assumptions (categorical distributions, fully observed board states, mean-field policy/state factorisation) needed to align the mathematics with MENACE. The exposition is computational and domain-specific: claims are restricted to the generative models and preferences we specify rather than broad statements about neuroscience or cognition.
+
+Having established the mathematical foundations of Dirichlet--categorical inference, we now turn to the Free Energy Principle itself. This principle, developed by Karl Friston and colleagues, provides a unified mathematical framework for understanding perception, action, and learning in adaptive systems. While the principle applies broadly to continuous and discrete systems alike, our focus here is on its formulation for discrete state spaces, as this is the setting most directly relevant to MENACE.
+
+The Free Energy Principle rests on a deceptively simple premise: adaptive systems act to minimise surprise, where surprise is defined information-theoretically as the negative log probability of observations. Since surprise itself cannot be computed directly (it would require knowing the true generative process of observations), systems instead minimise an upper bound on surprise known as variational free energy. This quantity, borrowed from statistical physics and variational Bayesian methods, serves as a tractable objective that, when minimised, ensures both accurate perception and adaptive action.
+
+\section{Variational Free Energy}
+
+Under the FEP, an agent maintains a generative model that specifies its beliefs about how observations are generated. For discrete systems engaged in sequential decision-making, this generative model takes the form $p(o, s, \pi)$, encoding beliefs about observations $o$, hidden states $s$, and policies $\pi$. Here, a policy represents a sequence of actions or a mapping from states to actions---in MENACE's case, this is the strategy for selecting moves in each board position. The agent also maintains an approximate posterior distribution $q(s, \pi)$ representing its current beliefs about states and policies given observations.
+
+The variational free energy quantifies the divergence between these beliefs and the true posterior that would result from exact Bayesian inference~\cite{friston2017active}:
+
+\begin{equation}
+	F = \E_{q(s,\pi)}[\ln q(s,\pi) - \ln p(o,s,\pi)]
+\end{equation}
+
+This can be decomposed as:
+
+\begin{equation}
+	F = D_{\KL}[q(s,\pi)\|p(s,\pi|o)] - \ln p(o)
+\end{equation}
+
+This decomposition reveals the dual nature of free energy minimisation. The first term, the Kullback-Leibler (KL) divergence, measures how far the approximate posterior $q(s,\pi)$ is from the true posterior $p(s,\pi|o)$. The second term is the log model evidence or marginal likelihood. Since $\ln p(o)$ is constant with respect to $q$, minimising $F$ is equivalent to minimising the KL divergence---that is, making the approximate posterior as close as possible to the true posterior.
+
+Throughout, we assume a mean-field factorisation $q(s,\pi)=q(s\mid\pi)\,q(\pi)$ for discrete states and policies and a fully observed board (the observation model is identity), aligning the math with the Tic-Tac-Toe setting.
+
+This formulation immediately suggests a principle for perception: by adjusting beliefs $q(s)$ to minimise free energy, an agent performs approximate Bayesian inference, updating its beliefs about hidden states to best explain observations. However, the Free Energy Principle goes beyond passive inference to encompass action selection, and this is where the framework becomes particularly powerful.
+
+Throughout this thesis we reserve $F$ for \emph{variational} free energy (inference about the present) and $G$ for \emph{expected} free energy (planning over future outcomes under candidate policies).
+
+\section{Expected Free Energy}
+
+For policy selection, Active Inference extends the free energy framework by introducing expected free energy~\cite{friston2016active,friston2017active}:
+
+\begin{equation}
+	G(\pi) = \E_{q(o_{t:T}, s_{t:T}|\pi)}[\ln q(s_{t:T}|\pi) - \ln p(o_{t:T}, s_{t:T}|\pi)].
+\end{equation}
+
+This expectation can be rearranged in several illuminating ways. A form that is especially useful for the present discussion separates epistemic and instrumental motives:
+
+\begin{equation}
+	G(\pi)
+	= \underbrace{\E_{q(o\mid\pi)}[-\ln p(o\mid C)]}_{\text{risk / instrumental cost}}
+	\;+\;\underbrace{\E_{q(s\mid\pi)}\!\big[H\big(p(o\mid s)\big)\big]}_{\text{likelihood ambiguity}}
+	\;-\;\underbrace{\E_{q(o\mid\pi)}\!\big[D_{\KL}\big(q(s\mid o,\pi)\,\|\,q(s\mid\pi)\big)\big]}_{\text{epistemic value}}.
+\end{equation}
+
+We follow the standard Active Inference convention: policies are selected by \emph{minimising} $G(\pi)$, so epistemic value enters with a negative sign (information gain is something the agent seeks, not pays). The risk term scores how well a policy is expected to realise prior preferences encoded in $C$ (negative expected log preference). The likelihood ambiguity term penalises policies that lead to uncertain observations under the agent's likelihood model. Many expositions emphasise the risk+ambiguity form of $G(\pi)$~\cite{friston2017active}. The decomposition above makes explicit how an epistemic drive can be switched off by setting its weight to zero.
+
+\begin{remark}[Terminology Note: Likelihood Ambiguity vs Outcome Entropy]
+	In the standard expected-free-energy decomposition above, the term labelled \emph{likelihood ambiguity} is $\E_{q(s\mid\pi)}\!\big[H(p(o\mid s))\big]$, which penalises
+	policies that lead to intrinsically uncertain observations under the agent's likelihood model.
+	In deterministic, fully observed Tic-Tac-Toe with an identity observation model, this likelihood
+	ambiguity is identically zero because the agent observes the board state without noise.
+
+	Later chapters introduce an optional \emph{outcome-entropy penalty} $H[q(o\mid\pi)]$---the entropy of
+	the predicted \emph{terminal} outcome distribution---as a practical proxy for uncertainty induced by
+	an unknown opponent. To avoid conflating this with likelihood ambiguity, we refer to this optional
+	term as \emph{outcome ambiguity} and weight it by $\beta_{\mathrm{amb}}$ (Table~8.1).
+	All experiments reported in this thesis set $\beta_{\mathrm{amb}} = 0$; the term is retained
+	in the objective for completeness but does not affect reported results.
+\end{remark}
+
+In many Active Inference treatments, epistemic value is expressed as expected information gain about hidden states. In this thesis we instantiate the epistemic term as mutual information between outcomes and Dirichlet parameters $\theta$ that encode uncertainty about action consequences (and, where relevant, opponent responses) in each canonical Tic-Tac-Toe state. This choice yields a closed-form expression (Appendix~\ref{ch:appendix-dirichlet-entropy}) and creates the direct bridge to MENACE's bead counts used throughout the rest of the thesis.
+
+\section{Discrete State Space Formulation}
+
+The general formulation above applies to any system describable by a generative model. For discrete systems like MENACE, we can be more specific about the mathematical forms involved. Following Da Costa et al.~\cite{dacosta2020active}, we consider discrete state spaces where all distributions are categorical:
+
+\begin{align}
+	p(s_t\mid s_{t-1},\pi) & = \text{Cat}(B^\pi_{s_{t-1}}) \\
+	p(o_t\mid s_t)         & = \text{Cat}(A_{s_t})
+\end{align}
+
+where $B^\pi$ are transition matrices and $A$ is the observation model.
+
+In this formulation, $B^\pi$ is a transition tensor where $B^\pi_{ij}$ represents the probability of transitioning from state $i$ to state $j$ under policy $\pi$. The observation model $A$ is a matrix where $A_{ij}$ represents the probability of observing outcome $i$ when in state $j$. For systems with deterministic state transitions (like Tic-Tac-Toe), many entries of $B^\pi$ are zero or one, simplifying computations considerably.
+
+The beliefs about these categorical distributions are themselves represented as Dirichlet distributions, leveraging the conjugacy relationships developed in Chapter~\ref{ch:mathematical-preliminaries}. Specifically, the agent maintains:
+
+\begin{itemize}
+	\item Beliefs about transition probabilities: $p(B^\pi_{i \cdot}) = \Dir(b^\pi_{i \cdot})$
+	\item Beliefs about observation probabilities: $p(A_{j \cdot}) = \Dir(a_{j \cdot})$
+\end{itemize}
+
+where $b^\pi_{i \cdot}$ and $a_{j \cdot}$ are vectors of Dirichlet parameters (counts). This hierarchical structure---categorical distributions with Dirichlet priors---enables exact Bayesian updating and, as we shall see, is precisely the structure implicitly implemented by MENACE.
+
+\section{Critical Perspectives and Falsifiability}
+
+The very generality that makes the FEP attractive has also drawn sustained criticism. Skeptics argue that because any behaviour can, in principle, be described as minimising some appropriately chosen free energy functional, the framework risks explanatory vacuity~\cite{bowers2012bayesian}. Others highlight tensions between the high level of abstraction in FEP derivations and the domain-specific detail required to generate concrete predictions~\cite{gershman2019free}. More recent critiques question whether ambitious philosophical claims made on behalf of the FEP are matched by falsifiable commitments~\cite{nave2025drive}.
+
+In this work we adopt a pragmatic stance: the FEP is a modelling methodology rather than a self-sufficient scientific theory. Its empirical content resides in the generative models and preference structures one specifies for a particular system. On this view, FEP-based explanations are credible only when they yield experimentally discriminable predictions about the dynamics of the system under study.
+
+MENACE offers precisely such an opportunity. Because the learning mechanism is finite, transparent, and easily simulated, we can test whether an Active Inference agent equipped with a carefully specified generative model reproduces its behaviour. Success would show that the FEP furnishes meaningful hypotheses in simple settings. Failure would falsify a concrete instantiation of the framework. The remainder of the thesis is therefore organised to distinguish those aspects of MENACE that align with Active Inference from those that do not, and to derive testable predictions from the resulting mapping.
+
+\section{Friston's Dirichlet Count Framework}
+\label{sec:friston-dirichlet}
+
+Having established the general framework of Active Inference for discrete state spaces, we now turn to a specific innovation that makes this framework particularly elegant: the use of Dirichlet counts for learning and model optimisation. This approach, developed by Friston and colleagues~\cite{friston2016active,friston2017active}, provides a principled way to update beliefs about model parameters while automatically balancing model complexity against data fit.
+
+The key insight is that Dirichlet parameters can be interpreted as counts of observations, making learning as simple as accumulating evidence. However, this simplicity belies sophisticated underlying principles. The framework naturally implements Occam's razor through Bayesian model reduction, automatically preferring simpler models that explain the data equally well. This section develops these ideas formally, providing the mathematical tools needed to understand MENACE's learning dynamics.
+
+\subsection{Initial Beads as Dirichlet Priors}
+
+A fundamental challenge in Bayesian inference is selecting appropriate priors. Too weak, and the model learns slowly; too strong, and it fails to adapt to data. This challenge helps us understand a crucial design choice in MENACE: why does Michie start with specific numbers of beads in each matchbox?
+
+The initial bead counts (4 beads per move for opening positions, decreasing to 1 for late-game positions) encode prior beliefs about move quality. In the Dirichlet framework, these initial counts act as concentration parameters that shape the prior distribution over move probabilities. The mathematics is remarkably simple: if we start with prior counts $\bar{a}$ (the initial beads) and observe data counts $d$ (game outcomes), the posterior has counts $a = \bar{a} + d$. This additive property means MENACE's learning is simply accumulating evidence on top of its initial beliefs.
+
+Michie's choice of 4-3-2-1 beads for moves at different game stages was not arbitrary. This declining schedule reflects the intuition that early-game positions have more strategic flexibility (requiring more exploration), while late-game positions often have clearer optimal moves (requiring less prior uncertainty). Different initial bead configurations would lead to fundamentally different learning trajectories---too few initial beads and MENACE might converge prematurely to suboptimal strategies; too many and it would learn too slowly to be practical.
+
+The framework of Bayesian model reduction~\cite{dacosta2020active} provides a formal perspective on what Michie achieved empirically. While we do not know his exact process, Michie's iterative refinement of the initial bead distribution---testing different configurations and selecting those that yielded better performance---can be understood as an informal implementation of BMR. He was, in essence, searching for priors that would produce good posteriors after learning, which is precisely what BMR formalises mathematically.
+
+This suggests an avenue for future work: could we start with a generic uniform prior (equal beads for all moves) and use formal BMR techniques to derive an optimal initial distribution? Would such an analysis recover something close to Michie's 4-3-2-1 schedule, thereby validating his empirical choices through principled Bayesian optimisation? Such a result would demonstrate that Michie's engineering intuition captured deep statistical principles decades before their formal articulation.
+
+\subsection{Learning Dynamics via Conjugacy and Variational Optimisation}
+
+In the discrete Dirichlet--categorical setting, the most direct and rigorous connection between belief updates and free energy minimisation is through \emph{conjugacy} (equivalently, coordinate-ascent variational inference in an exponential family).
+
+Let $\theta\in\Delta^{K-1}$ parameterise a categorical distribution over outcomes $o\in\{1,\dots,K\}$, with a Dirichlet prior $p(\theta)=\Dir(\theta\mid \bar{a})$. For observations $o_{1:N}$, define counts $n_i=\sum_{t=1}^N \mathbb{I}[o_t=i]$. By conjugacy, the exact posterior is
+
+\begin{equation}
+	p(\theta\mid o_{1:N})=\Dir(\theta\mid a),\qquad a_i=\bar{a}_i+n_i.
+\end{equation}
+
+In an online setting, after observing a single outcome $o_t=i$, the update is simply
+
+\begin{equation}
+	a_i \leftarrow a_i+1,\qquad a_j \leftarrow a_j\ \ (j\neq i).
+\end{equation}
+
+This update can also be obtained as the variational optimum within the family $q(\theta)=\Dir(\theta\mid a)$: minimising variational free energy with respect to $q$ yields the same additive update because the model is conjugate. In this sense, Dirichlet ``count'' updates implement an exact free-energy-minimising belief update in the discrete setting.
+
+\paragraph{Relation to MENACE.} Interpreting a matchbox's bead counts as concentration parameters makes the action-selection rule $q(a)\propto a$ equivalent to sampling from the posterior predictive categorical distribution. However, MENACE's \emph{negative reinforcement} (removing beads) and \emph{restocking} are \emph{heuristic policy-shaping mechanisms} rather than literal Bayesian updates: a strict Dirichlet posterior update only adds evidence. This distinction is important for interpreting MENACE as a useful computational analogue of Active Inference rather than an exact instantiation of Bayesian inference.
+
+Having established how Dirichlet count updates relate to free energy minimisation through conjugacy, we are now equipped to analyse MENACE itself. In the following chapter, we will demonstrate that this 1961 mechanical computer, built from matchboxes and beads, implements a learning scheme that is Bayesian for action selection but uses heuristic reinforcement for policy shaping.
+
+\section{Summary}
+
+This chapter defined variational and expected free energy for the discrete generative models used in the thesis, clarified the assumptions under which the decompositions hold, and positioned epistemic value as mutual information about Dirichlet parameters. The next chapter turns to MENACE's historical construction and state-space design, preparing the ground for the Dirichlet--categorical mapping.

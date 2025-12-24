@@ -1,0 +1,276 @@
+\chapter{Experimental Design and Implementation}
+\label{ch:experimental-design}
+
+This chapter describes the experimental setup used to compare MENACE, Active Inference variants, and tabular reinforcement-learning baselines. It specifies the shared game tree data, agent models, policy-selection rules, learning updates, hyperparameters, and evaluation protocols (seeds, training episodes, and opponents). The aim is reproducibility: each agent is defined in parallel structure so that differences in behaviour can be traced to objective design choices rather than implementation ambiguity.
+
+The theoretical correspondence is only useful insofar as it yields falsifiable predictions. This chapter specifies the software stack and evaluation protocol used to test MENACE against Active Inference variants and tabular reinforcement-learning baselines.
+
+\section{State-space Enumeration and Verification}
+
+All experiments operate on the fully enumerated Tic-Tac-Toe game tree. We precompute:
+
+\begin{itemize}
+	\item Canonical board labels for each symmetry class under the All/Decision-only/Michie filters
+	\item The set of forced states and the 17 double-threat positions
+	\item Exhaustive trajectories (255,168 legal games; 26,830 canonical trajectories) with outcome and length histograms
+\end{itemize}
+
+These enumerations serve as golden data for unit tests (Appendix~\ref{ch:appendix-game tree}) and as lookup tables during training, ensuring that every agent sees exactly the same decision space.
+
+\section{Agent Implementations}
+
+We train and evaluate three classes of learners:
+
+\subsection{MENACE (Instrumental Active Inference)}
+
+\begin{itemize}
+	\item \textbf{Model:} One Dirichlet vector per canonical state (All/Decision-only/Michie filters). Preferences correspond to the bead utilities $\{+3,+1,-1\}$; no epistemic term ($\lambda = 0$).
+	\item \textbf{Policy selection:} Posterior-predictive probability matching implemented by drawing a bead uniformly from the matchbox.
+	\item \textbf{Learning/update:} After each game, update all visited $(s,a)$ with +3 (win), +1 (draw), or $-1$ (loss); optional restocking keeps $\alpha_{s,a}>0$.
+	\item \textbf{Hyperparameters:} State filter (All/338, Decision-only/304, Michie/287); initial bead schedule 4-3-2-1 by game stage; restock mode (None/Move/Box); reinforcement schedule (+3/+1/$-1$).
+\end{itemize}
+
+\subsection{Instrumental Active Inference ($\lambda = 0$)}
+
+\begin{itemize}
+	\item \textbf{Model:} Exact game tree outcome prediction combined with learned Dirichlet beliefs over opponent actions (opponent-policy model); preference distribution $p(o\mid C) = (0.60, 0.35, 0.05)$ for win/draw/loss.
+	\item \textbf{Policy selection:} Softmax/KL-regularised policy with temperature $\lambda_{\text{policy}}$ (flag \texttt{--policy-lambda}, fixed at 0.25).
+	\item \textbf{Learning/update:} Updates the opponent-policy Dirichlet parameters from observed opponent moves and selects actions by minimising the instrumental term $D_{\KL}(q(o\mid\pi)\,\|\,p(o\mid C))$; epistemic value suppressed ($\lambda=0$, $\beta_{\mathrm{amb}}=0$).
+	\item \textbf{Hyperparameters:} Preference vector above; $\lambda_{\text{policy}}=0.25$; opponent model kind (\texttt{--ai-opponent}); state filter as for MENACE.
+\end{itemize}
+
+\subsection{Hybrid Active Inference ($\lambda > 0$)}
+
+\begin{itemize}
+	\item \textbf{Model:} As for the instrumental agent (exact game tree outcome prediction with learned Dirichlet opponent-policy beliefs), augmented with an epistemic term computed from expected information gain about the opponent-policy parameters.
+	\item \textbf{Policy selection:} Same KL-regularised softmax with $\lambda_{\text{policy}}=0.25$.
+	\item \textbf{Learning/update:} Minimises $G(\pi) = D_{\KL}(q(o\mid\pi)\,\|\,p(o\mid C)) - \lambda\, I(a_{\text{opp}};\theta_{\text{opp}})$ with $\lambda \in \{0.25, 0.5\}$; ambiguity weight $\beta_{\mathrm{amb}}=0$.
+	\item \textbf{Hyperparameters:} Epistemic weight (\texttt{--ai-epistemic-weight}) $\in \{0.25, 0.5\}$; preference vector as above; state filter matched to MENACE runs.
+\end{itemize}
+
+\subsection{Pure Active Inference}
+
+\begin{itemize}
+	\item \textbf{Model:} Learned Dirichlet outcome model $q(o\mid s,a)$ over terminal outcomes $o\in\{\text{win},\text{draw},\text{loss}\}$ for each state-action pair; the EFE is computed from these learned outcome beliefs rather than from the perfect game tree.
+	\item \textbf{Policy selection:} KL-regularised softmax with $\lambda_{\text{policy}}=0.25$ on EFE scores.
+	\item \textbf{Learning/update:} Updates the outcome-model Dirichlet parameters from observed terminal outcomes; epistemic term is $I(o;\theta_{\text{out}})$ weighted by $\lambda \in \{0, 0.25, 0.5\}$; $\beta_{\mathrm{amb}}=0$. (The implementation also tracks opponent beliefs for logging/serialization, but the EFE uses the outcome-model beliefs.)
+	\item \textbf{Hyperparameters:} Same preference vector, epistemic weights, and temperature as the hybrid agent; state filter aligned to the corresponding MENACE configuration.
+\end{itemize}
+
+\section{Notation and Implementation Mapping}
+
+To ensure reproducibility, Table~\ref{tab:notation-mapping} provides an explicit correspondence between thesis notation, CLI flags, and Rust implementation identifiers.
+
+\begin{table}[htbp]
+	\caption{Notation mapping between thesis, CLI, and implementation.}
+	\label{tab:notation-mapping}
+	\centering
+	\small
+	\begin{tabular}{@{}llll@{}}
+		\toprule
+		Symbol                    & Description        & CLI Flag                       & Rust Field                 \\
+		\midrule
+		$\lambda$                 & Epistemic weight   & \texttt{--ai-epistemic-weight} & \texttt{epistemic\_weight} \\
+		$\lambda_{\text{policy}}$ & Policy temperature & \texttt{--policy-lambda}       & \texttt{policy\_lambda}    \\
+		$\beta_{\mathrm{amb}}$    & Ambiguity weight   & \texttt{--ai-ambiguity-weight} & \texttt{ambiguity\_weight} \\
+		\bottomrule
+	\end{tabular}
+\end{table}
+
+Note that the ``ambiguity'' term used in this thesis is an \emph{outcome-entropy penalty} (entropy of the predicted terminal outcome distribution). In deterministic, fully observed Tic-Tac-Toe, the standard Active Inference likelihood ambiguity term is identically zero; the outcome-entropy penalty is introduced as a practical proxy for uncertainty induced by an unknown opponent.
+
+\subsection{Oracle Active Inference}
+
+\begin{itemize}
+	\item \textbf{Model:} Uses the fully enumerated game tree for transition/outcome predictions but retains the assumed opponent-policy prior (uniform in these runs); no learning of dynamics.
+	\item \textbf{Policy selection:} Minimises the same $G(\pi)$ objective as the hybrid agent with selectable $\lambda$ and $\lambda_{\text{policy}}$.
+	\item \textbf{Learning/update:} No learning of environment parameters; updates only the policy beliefs induced by the chosen $G(\pi)$ and preferences.
+	\item \textbf{Hyperparameters:} Same preference vector, $\lambda$ choices, and temperature as above; serves as a diagnostic for model specification rather than a performance upper bound.
+\end{itemize}
+
+\begin{table}[htbp]
+	\caption{Agent taxonomy: what is modelled/learned, and what the epistemic term targets.}
+	\label{tab:agent-taxonomy}
+	\centering
+	\small
+	\begin{tabularx}{\textwidth}{@{}L{2.2cm}YYYY@{}}
+		\toprule
+		Agent                          & Outcome model                                                    & Opponent model                                                         & Epistemic term targets                                                    & Policy selection                                   \\
+		\midrule
+		MENACE                         & none (policy-only)                                               & none                                                                   & none ($\lambda=0$)                                                        & probability matching from $\Dir(\alpha^\pi_s)$     \\
+		Instrumental AIF ($\lambda=0$) & exact via game tree                                              & learned $\Dir(\alpha^{\text{opp}}_s)$                                  & none ($\lambda=0$)                                                        & KL-regularised softmax ($\lambda_{\text{policy}}$) \\
+		Hybrid AIF ($\lambda>0$)       & exact via game tree                                              & learned $\Dir(\alpha^{\text{opp}}_s)$                                  & opponent actions $a_{\text{opp}}$ (info gain about $\theta_{\text{opp}}$) & KL-regularised softmax over EFE                    \\
+		Pure AIF                       & learned $\Dir(\alpha^{\text{out}}_{s,a})$ over terminal outcomes & tracked (not used in EFE)                                              & terminal outcomes $o$ (info gain about $\theta_{\text{out}}$)             & KL-regularised softmax over learned EFE            \\
+		Oracle AIF                     & exact via game tree                                              & fixed assumption (uniform/\allowbreak adversarial/\allowbreak minimax) & none (no parameter learning)                                              & KL-regularised softmax over EFE                    \\
+		\bottomrule
+	\end{tabularx}
+\end{table}
+
+\subsection{Reinforcement Learning Baselines}
+
+\paragraph{Q-Learning (tabular).}
+
+\begin{itemize}
+	\item \textbf{Model:} Tabular $Q(s,a)$ over canonical states; deterministic transitions given the opponent policy.
+	\item \textbf{Policy selection:} $\varepsilon$-greedy with decaying $\varepsilon$ (start 0.5, decay 0.995 per episode, floor 0.01).
+	\item \textbf{Learning/update:} $Q(s,a) \leftarrow Q(s,a) + \eta \big[r + \gamma \max_{a'} Q(s',a') - Q(s,a)\big]$ with learning rate $\eta=0.5$, discount $\gamma=0.99$.
+\end{itemize}
+
+\paragraph{SARSA (tabular).}
+
+\begin{itemize}
+	\item \textbf{Model:} Same state/action representation as Q-learning.
+	\item \textbf{Policy selection:} $\varepsilon$-greedy with the same schedule.
+	\item \textbf{Learning/update:} $Q(s,a) \leftarrow Q(s,a) + \eta \big[r + \gamma Q(s',a') - Q(s,a)\big]$ using the next action actually selected (on-policy).
+	\item \textbf{Hyperparameters:} $\eta=0.5$, $\gamma=0.99$, $\varepsilon$ schedule as above.
+\end{itemize}
+
+\section{Opponent Models}
+
+Each learner can train against and be evaluated against different opponent types:
+
+\begin{itemize}
+	\item \textbf{Random}: Uniform random move selection
+	\item \textbf{Defensive}: Prioritises blocking wins, then centre, then random
+	\item \textbf{Minimax}: Optimal play via exhaustive game tree search
+	\item \textbf{Mixed}: Curriculum that transitions from random to stronger opponents
+	\item \textbf{Self-play}: Agent plays against itself (for co-evolutionary dynamics)
+\end{itemize}
+
+\section{Training Protocols}
+
+\subsection{Standard Training}
+
+Fixed-opponent training for specified number of games:
+
+\begin{itemize}
+	\item 500 games for fast convergence experiments
+	\item 5,000 games for asymptotic performance
+	\item Post-training validation against optimal play (100 games per seed unless stated otherwise)
+\end{itemize}
+
+\subsection{Curriculum Learning}
+
+Progressive difficulty increase:
+
+\begin{enumerate}
+	\item Games 1--200: Random opponent
+	\item Games 201--300: Defensive opponent
+	\item Games 301--500: Minimax opponent
+\end{enumerate}
+
+\subsection{Evaluation Protocol}
+
+Unless otherwise noted, results aggregate 10 seeds, use 500 training games per agent (5,000 for RL asymptotics), and report post-training validation over 100 games per seed against a minimax opponent.
+
+Training proceeds game-by-game, logging:
+
+\begin{itemize}
+	\item \textbf{Performance Metrics:}
+	      \begin{itemize}
+		      \item Win/draw/loss rates versus each opponent type
+		      \item Cumulative and windowed statistics
+	      \end{itemize}
+
+	\item \textbf{Learning Dynamics:}
+	      \begin{itemize}
+		      \item Policy divergence: KL(learned $\|$ minimax) on canonical states
+		      \item Value function convergence (for RL agents)
+		      \item Bead count evolution (for MENACE)
+	      \end{itemize}
+
+	\item \textbf{Free Energy Decomposition:}
+	      \begin{itemize}
+		      \item Risk: $D_{\KL}(q(o\mid\pi)\,\|\,p(o\mid C))$ over terminal outcomes (win/draw/loss from the agent perspective)
+		      \item Epistemic value: Dirichlet--categorical mutual information
+		      \item Total free energy trajectory
+	      \end{itemize}
+
+	\item \textbf{Coverage Metrics:}
+	      \begin{itemize}
+		      \item Fraction of states visited during training
+		      \item High-MI state exploration rate
+		      \item Action selection entropy over time
+	      \end{itemize}
+\end{itemize}
+
+\section{Statistical Methodology}
+
+\subsection{Multi-seed Validation}
+
+All experiments use:
+
+\begin{itemize}
+	\item 10 seeds for primary comparisons
+	\item Seeds shared across agents for paired statistical tests
+	\item Validation performance reported as mean $\pm$ standard deviation across seeds
+\end{itemize}
+
+\subsection{Significance Testing}
+
+Where we discuss differences between agents, we emphasise effect sizes and variability across seeds. Formal hypothesis testing is not central to our claims and is omitted unless explicitly stated.
+
+\section{Implementation Details}
+
+\subsection{Software Architecture}
+
+The experimental framework is implemented in Rust with:
+
+\begin{itemize}
+	\item Compact, copyable 10-byte board states and deterministic D4 symmetry canonicalisation
+	\item Scalar symmetry transforms (no SIMD) with precomputed lookup tables
+	\item Single-threaded training/evaluation loops (seeds run sequentially in this release)
+	\item Targeted heap allocation for logs/exports; game-step paths reuse stack data but are not fully zero-allocation
+\end{itemize}
+
+\subsection{Verification Suite}
+
+Comprehensive testing ensures correctness:
+
+\begin{itemize}
+	\item Unit tests for all game mechanics
+	\item Golden data validation against known optimal policies
+	\item Symmetry invariance checks
+	\item Convergence regression tests
+\end{itemize}
+
+\subsection{Reproducibility}
+
+Full reproducibility is ensured through:
+
+\begin{itemize}
+	\item Explicit seeding via CLI flags (\texttt{--seed} for training, derived \texttt{--validation-seed}), backed by \texttt{rand::rngs::StdRng} (ChaCha-based) rather than Mersenne Twister
+	\item Deterministic symmetry canonicalisation
+	\item Version-controlled experimental configurations
+	\item Automated result archiving with metadata
+\end{itemize}
+
+\section{Computational Requirements}
+
+Typical experimental runs require:
+
+\begin{itemize}
+	\item Single agent training (500 games): $\sim$0.5 seconds
+	\item Full comparison suite (all agents, 10 seeds): $\sim$2 minutes
+	\item Exhaustive parameter sweep: $\sim$30 minutes
+	\item Memory footprint: $<$100 MB per agent
+\end{itemize}
+
+The efficiency enables rapid iteration and extensive parameter exploration, crucial for understanding the subtle differences between learning mechanisms.
+
+\section{Data Collection and Analysis}
+
+The experimental pipeline produces:
+
+\begin{itemize}
+	\item JSONL event streams for detailed trajectory analysis
+	\item CSV summaries for statistical analysis
+	\item Matplotlib/Seaborn visualisations
+	\item \LaTeX-formatted performance tables
+\end{itemize}
+
+All raw data is preserved for post-hoc analysis, enabling new research questions to be answered without re-running experiments.
+
+\section{Summary}
+
+This chapter specified the agents, hyperparameters, opponent models, training curricula, and evaluation settings used in the study, with default preferences $p(\text{win},\text{draw},\text{loss})=(0.60,0.35,0.05)$ and 10-seed evaluations over 100 games versus a minimax opponent. The next chapter presents the empirical results and ablations produced under this protocol.

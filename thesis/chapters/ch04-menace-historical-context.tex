@@ -1,0 +1,87 @@
+\chapter{MENACE's Historical Context and Mechanism}
+\label{ch:menace-historical-context}
+
+This chapter situates MENACE historically, explains the mechanical design choices that constrain the system, and formalises the state filters used in the rest of the thesis. The goal is to anchor later modelling choices in the physical device and to make the taxonomy of matchboxes, pruning rules, and reinforcement schedules unambiguous.
+
+To understand MENACE's significance, we first situate it in the historical context in which it emerged and outline the constraints of its mechanical design. Donald Michie constructed MENACE in 1961, at a time when artificial intelligence was still finding its identity as a field and when the very possibility of machine learning was viewed with scepticism. His matchbox computer provided an early counterexample to the prevailing belief that a program could never outperform its programmer.
+
+\section{The Original Challenge}
+
+Michie's motivation was both theoretical and practical. In his paper ``Trial and Error''~\cite{michie1963experiments}, he explicitly distinguished between two aspects of learning: ``classification of the stimulus'' and ``reinforcement of the response.'' He acknowledged that classification was ``quite extraordinarily complicated'' but argued that reinforcement ``is much more tractable'' once the discrete situations could be enumerated. This insight led to a crucial architectural decision: rather than attempting to solve the general problem of pattern recognition and learning together, MENACE would focus exclusively on reinforcement learning within a fully enumerated state space.
+
+The choice of Tic-Tac-Toe (Noughts and Crosses) as the domain was far from arbitrary. The game offered several critical properties:
+
+\begin{enumerate}
+	\item \textbf{Finite state space}: With only 765 distinct canonical positions in total (after accounting for symmetries), complete enumeration was feasible (validated by the enumeration harness in Appendix~\ref{ch:appendix-game tree})
+	\item \textbf{Clear outcomes}: Games always terminate in win, draw, or loss, providing unambiguous feedback
+	\item \textbf{Strategic depth}: Despite its simplicity, optimal play requires non-trivial decision-making
+	\item \textbf{Symmetry structure}: The game's eight-fold symmetry (rotations and reflections) allows dramatic state space reduction
+\end{enumerate}
+
+This last point proved particularly important. By recognising that many board positions are essentially identical under rotation and reflection, Michie could reduce the number of matchboxes needed from thousands to just 287---few enough to fit in a small cabinet.
+
+\section{The Mechanical Implementation}
+
+\begin{quote}
+	Canonical setup (Michie, 1961). In Michie's original physical MENACE, the agent plays first as noughts (O). Win $\to$ +3, draw $\to$ +1, loss $\to$ the used bead is not returned ($-1$). We adopt this \emph{reinforcement schedule} unless otherwise noted.
+\end{quote}
+
+In the remainder of this thesis and in the accompanying software implementation, we adopt the standard convention that X moves first. Accordingly, we treat MENACE as the first player (X) in all subsequent analysis. This is a notational relabeling only: the game dynamics and terminal outcomes are unchanged. Only the symbol used to denote the agent's mark differs.
+
+The physical construction of MENACE was remarkably straightforward. Each matchbox represented one canonical board position that MENACE (playing first with O pieces in the historical device) might encounter. Inside each box were coloured beads, with each colour corresponding to a legal move in that position. To select a move, one simply shook the box and drew a bead at random---the colour determined which square to play.
+
+The learning mechanism was equally elegant. After each game, MENACE's trajectory through the matchboxes was recorded. If MENACE won, three additional beads of the appropriate colour were added to each matchbox used during the game. For a draw, one bead was added. For a loss, the drawn bead was not returned, effectively removing one bead from each used box.
+
+This simple reinforcement schedule encoded sophisticated principles:
+
+\begin{itemize}
+	\item \textbf{Credit assignment}: All moves in a game trajectory receive the same reinforcement, implementing a form of Monte Carlo learning
+	\item \textbf{Exploration through randomness}: The probabilistic move selection (drawing beads) naturally balances exploration and exploitation
+	\item \textbf{Adaptive learning rates}: As beads accumulate, the impact of individual games diminishes, creating an automatic learning rate schedule
+\end{itemize}
+
+\section{The Matchbox Taxonomy}
+
+MENACE's exact configuration has been subject to some historical confusion. Different reconstructions report different numbers of matchboxes, leading to apparent inconsistencies in the literature. Our analysis resolves this by identifying three distinct filtering strategies that determine the state space:
+
+\begin{itemize}
+	\item \textbf{All / 338 boxes}: Every rotationally canonical, X-to-move position is retained, even if there is only one legal move left. This is the superset used for enumerating MENACE-style matchboxes; the full game tree (both players, including terminal states) contains 765 canonical states under $D_4$ symmetry.
+
+	\item \textbf{Decision-only / 304 boxes}: Forced states (those with a single legal move) are pruned, yielding the 304 states reported in several modern reconstructions~\cite{mscroggs2019menace}. This removes trivial continuations while keeping all strategically meaningful branches.
+
+	\item \textbf{Michie / 287 boxes}: Michie's hardware excluded both forced positions and the 17 double-threat states where the opponent already has two simultaneous winning moves. This minimises hardware without materially affecting play quality and matches the state count described in the 1960s papers.
+\end{itemize}
+
+All three matchbox filters are available in our software experiments, allowing us to reproduce a model of the original hardware, the common 304-box variant, or the 338-box superset. Appendix~\ref{appendix:canonical-filters} lists the forced and double-threat states together with the verification tests that guard these counts.
+
+Michie pruning refers specifically to the removal of forced and double-threat states; canonical states refer to the symmetry-reduced set before any pruning; decision-only filtering removes only forced states. These distinctions are kept explicit to avoid conflating historical hardware constraints with modelling choices in later experiments.
+
+\section{Initial Beads as Design Choices}
+
+A fundamental challenge in any learning system is selecting appropriate initial conditions. Too much prior bias and the system fails to adapt; too little and it learns too slowly to be practical. Michie's solution was both principled and pragmatic.
+
+The initial bead counts---4 beads per move for opening positions, decreasing to 1 for late-game positions---reflect careful engineering judgment. This declining schedule encodes the intuition that early-game positions have more strategic flexibility (requiring more exploration), while late-game positions often have clearer optimal moves (requiring less prior uncertainty).
+
+As discussed in Chapter~\ref{ch:free-energy-principle}, these initial counts correspond precisely to Dirichlet concentration parameters in the Bayesian framework. Different initial bead configurations lead to fundamentally different learning trajectories---too few initial beads and MENACE might converge prematurely to suboptimal strategies; too many and it would learn too slowly to be practical. Michie's empirical tuning of these values anticipated principles that would later be formalised in Bayesian model reduction.
+
+\section{A Historical Irony}
+
+MENACE's significance extends beyond its role as an early demonstration of machine learning. When Michie constructed MENACE in 1961, sequential decision-making under uncertainty was an active research topic in operations research, and even the two-armed bandit was widely treated as a technically challenging benchmark. Contemporary accounts sometimes described it as ``unsolved'' in the sense that general, practically implementable solutions and guarantees were not yet established.
+
+From a modern perspective, MENACE can be read as a mechanically implementable instance of posterior-sampling-style exploration: its bead draws implement probability matching under a Dirichlet--categorical model, closely related to Thompson's 1933 proposal~\cite{thompson1933likelihood}. Regret-optimal analyses of Thompson sampling and related algorithms were developed much later, but the underlying principle---sampling actions in proportion to posterior belief---has become a foundational mechanism in modern bandit methods and their applications.
+
+\section{The Bandit Connection and Convergent Evolution}
+
+This MENACE-bandit correspondence exemplifies a recurring pattern in intelligence research: practical implementations often precede theoretical understanding. Thompson proposed his sampling method in 1933 for clinical trials, Michie implemented it mechanically in 1961 without knowing Thompson's work, and the machine learning community rediscovered it in the 2010s for online recommendation systems. This convergent evolution suggests that uncertainty-driven exploration through posterior sampling is so fundamental that it emerges independently across different domains.
+
+The pattern is particularly striking given that, in Michie's era, the two-armed bandit was described in contemporary literature as ``still unsolved, and a fortiori so is the problem of optimizing the design of a game-learning automaton for even the simplest of games.'' With hindsight, regret-optimal bandit algorithms and theoretical guarantees were developed later. MENACE can be read as a mechanically implementable answer to that then-open question, instantiating posterior-sampling-style exploration long before the modern theoretical picture was fully articulated.
+
+\section{From Matchboxes to Mathematics}
+
+MENACE demonstrates that effective Bayesian solutions to the exploration-exploitation dilemma can emerge from simple physical mechanisms without conscious design. The physical constraints of the bead mechanism may provide implicit regularization that purely algorithmic approaches lack, offering a complementary perspective on modern exploration strategies.
+
+In the following chapters, we will formalise this correspondence, showing that MENACE's beads are precisely Dirichlet parameters, its random draws implement probability matching, and its reinforcement schedule approximates preference-weighted policy shaping on expected free energy. But the historical lesson remains: sometimes the best way to solve a theoretical problem is to build a physical machine and observe what principles emerge from its constraints.
+
+\section{Summary}
+
+This chapter grounded the MENACE mechanism in its historical and hardware context, clarified the state-space filters used in later experiments, and linked matchbox counts to verified canonical enumerations. The next chapter maps these components to a Dirichlet--categorical representation to formalise the MENACE--Active Inference correspondence.

@@ -1,0 +1,23 @@
+\chapter{Dirichlet Entropy and Epistemic Value}
+\label{ch:appendix-dirichlet-entropy}
+
+This appendix derives the expected categorical entropy under a Dirichlet prior, which yields the closed-form mutual-information term $I(o;\theta)$ (epistemic value) used throughout the thesis. Let $\theta \sim \Dir(\alpha)$ with $\alpha_0 = \sum_i \alpha_i$. Using the moment identity~\cite{minka2000dirichlet}
+
+\begin{equation}
+	\E[\theta_i \ln \theta_i] = \frac{\alpha_i}{\alpha_0}\Big(\psi(\alpha_i + 1) - \psi(\alpha_0 + 1)\Big),
+\end{equation}
+
+we obtain
+
+\begin{equation}
+	\E\Big[-\sum_i \theta_i \ln \theta_i\Big]
+	= \psi(\alpha_0 + 1) - \sum_i \frac{\alpha_i}{\alpha_0} \psi(\alpha_i + 1),
+\end{equation}
+
+where $\psi$ denotes the digamma function. The mutual information between the categorical parameter $\theta$ and a single observation $o$ under the Dirichlet--categorical model therefore has the closed form
+
+\begin{equation}
+	I(o;\theta) = H\!\left[\frac{\alpha}{\alpha_0}\right] - \left[\psi(\alpha_0 + 1) - \sum_i \frac{\alpha_i}{\alpha_0} \psi(\alpha_i + 1)\right],
+\end{equation}
+
+which matches the implementation in \texttt{dirichlet\_categorical\_mi($\alpha$)} and guarantees that epistemic value is measured in the same units as the pragmatic risk term. Mutual information is symmetric, so $I(o;\theta)=I(\theta;o)$; we use $I(o;\theta)$ throughout the thesis.

@@ -1,0 +1,74 @@
+\chapter{Answering Michie's Question}
+\label{ch:answering-michies-question}
+
+This chapter interprets the empirical results in light of Michie's 1966 question about costing information versus immediate gain. It ties the experimental evidence to the expected free energy formulation and makes explicit the assumptions and limitations of the correspondence established so far.
+
+In 1966, Donald Michie posed a fundamental question about learning in games:
+
+\begin{quote}
+	In simple games for which individual storage of all past board positions is feasible, is any optimal learning algorithm known? \ldots\ The difficulty lies in costing the acquisition of information for future use at the expense of present expected gain. A means of expressing the value of the former in terms of the latter would lead directly to the required algorithm.~\cite{michie1966gameplayingautomata}
+\end{quote}
+
+In Tic-Tac-Toe we \emph{can} store all relevant board positions, but Michie's difficulty remains: how should an agent balance immediate game outcomes against the long-run value of reducing uncertainty?
+
+\section{The Formal Answer: Expected Free Energy Prices Information}
+
+Active Inference addresses Michie's request directly. Policies are evaluated by expected free energy and selected by \emph{minimising} $G(\pi)$. For our outcome-level formulation, a convenient parameterised objective is:
+
+\begin{equation}
+	G_\lambda(\pi)
+	= \underbrace{\mathrm{Risk}(\pi)}_{\text{instrumental cost}}
+	\;+\;\beta_{\mathrm{amb}}\,\underbrace{H[q(o\mid\pi)]}_{\text{outcome ambiguity}}
+	\;-\;\lambda\,\underbrace{I(o;\theta)}_{\text{epistemic value}}.
+\end{equation}
+
+For the experiments reported in Part~III, risk is instantiated as $D_{\KL}(q(o\mid\pi)\,\|\,p(o\mid C))$; see the implementation note in Chapter~\ref{ch:epistemic-vs-instrumental}.
+
+The epistemic term enters with a \emph{negative} sign because information gain is sought under minimisation: increasing expected information gain reduces $G_\lambda$. The scalar $\lambda\ge 0$ is precisely the exchange rate Michie asked for: it prices ``information for future use'' in the same units as ``present expected gain''.
+
+\section{The Practical Answer: What ``Optimal'' Would Mean}
+
+Michie's phrasing invites a single ``optimal learning algorithm'', but in modern terms the optimum depends on what is being optimised and what is known:
+
+\begin{itemize}
+	\item \textbf{If the environment model is known}, the optimal agent is a planner (minimax in Tic-Tac-Toe).
+	\item \textbf{If parts of the model are unknown}, the Bayes-optimal solution is planning in \emph{belief space}, which rapidly becomes intractable even in small domains once you include opponent uncertainty and long horizons.
+\end{itemize}
+
+Expected free energy provides a tractable approximation: it replaces full belief-space planning with an objective that trades off goal-realisation against expected information gain under a specified generative model.
+
+\section{The Empirical Answer in This Thesis}
+
+Our experiments make Michie's trade-off measurable in a fully enumerable game. Table~\ref{tab:performance-summary} reports post-training validation against an optimal opponent, and Figure~\ref{fig:beta-sweep} shows how Pure Active Inference changes as $\lambda$ varies.
+
+Three empirically grounded conclusions follow:
+
+\begin{enumerate}
+	\item \textbf{Instrumental equivalence}: MENACE and an instrumental Active Inference baseline (AIF with $\lambda=0$) achieve broadly comparable performance within the observed seed-to-seed variation (Table~\ref{tab:performance-summary}).
+	\item \textbf{Epistemic value is measurable, but comes with a short-horizon trade-off}: increasing $\lambda$ increases epistemic-value contributions and changes Pure AIF learning dynamics; within our 500-game budget, the epistemic variants do not outperform the $\lambda=0$ Pure AIF baseline and remain behind the strongest instrumental baselines (Table~\ref{tab:performance-summary}).
+	\item \textbf{Fixed $\lambda$ is not a constant exploration bonus}: $\lambda$ is a constant \emph{weight}, but the epistemic term $I(o;\theta)$ tends to decrease as Dirichlet posteriors concentrate, so exploration pressure typically decays endogenously rather than remaining constant.
+\end{enumerate}
+
+\section{What the ``Required Algorithm'' Looks Like}
+
+Michie asked for a way to \emph{cost} information. Expected free energy provides that accounting. What the analysis adds is a concrete instantiation:
+
+\begin{itemize}
+	\item MENACE realises an instrumental special case (epistemic value suppressed) with implicit uncertainty-driven exploration via probability matching.
+	\item Active Inference generalises this by allowing epistemic value to be priced explicitly via $\lambda$, making the information--performance trade-off a parameter rather than an emergent property.
+\end{itemize}
+
+In other words, the ``required algorithm'' is not a single update rule, but a \emph{family} of objectives (and approximations) that make the trade-off explicit---of which MENACE is a historically remarkable, mechanisable special case.
+
+\section{Limitations}
+
+\begin{itemize}
+	\item \textbf{Opponent modelling dependence:} Results depend on the chosen opponent-model class (uniform/adversarial/minimax) and, for learned-opponent variants, on the Dirichlet prior over opponent actions. Alternate modelling assumptions would change both risk and epistemic terms.
+	\item \textbf{Preference specification:} The preference distribution $p(o\mid C)=(0.60,0.35,0.05)$ is a modelling choice; different utilities would alter the instrumental gradients and the inferred correspondence.
+	\item \textbf{Finite evaluation budget:} Validation uses 100 games per seed; binomial noise is non-negligible, and some regimens (e.g., no-restock) have incomplete seeds.
+	\item \textbf{No finite-time optimality claim:} Neither MENACE nor the Active Inference variants are proved to reach minimax play after a fixed number of games; statements about performance are empirical and domain-specific.
+\end{itemize}
+
+\section{Summary}
+
+Expected free energy supplies the accounting Michie requested by pricing information and immediate gain in common units. Within the Tic-Tac-Toe domain, MENACE matches the instrumental ($\lambda=0$) Active Inference baseline, while explicit epistemic weighting incurs a short-horizon cost under the budgets tested. The next chapter discusses the broader implications and future directions informed by these limitations.

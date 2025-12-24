@@ -1,0 +1,38 @@
+# ChkTeX configuration for thesis
+# See: https://www.nongnu.org/chktex/ChkTeX.pdf
+
+# Suppress warnings:
+# 1  - Command terminated with space (common with \maketitle, \mainmatter, etc.)
+# 8  - Wrong length of dash (false positives for -- in compound words)
+# 13 - Intersentence spacing (stylistic, not errors)
+# 24 - Delete space to maintain page references (trailing whitespace, handled by editor)
+# 36 - Vertical rules in tables (we use booktabs which avoids this)
+# 38 - Punctuation in front of quotes (British vs American style)
+# 40 - Punctuation inside math mode (false positive for factorial notation)
+# 44 - User Regex (disabled)
+
+CmdLine {
+    -n1 -n8 -n13 -n24 -n36 -n38 -n40 -n44
+}
+
+# Environments where math mode is implicit
+VerbEnvir {
+    algorithm
+    algorithmic
+}
+
+# Additional silent macros (commands that don't produce output warnings)
+Silent {
+    \EFE
+    \KL
+    \Dir
+    \Cat
+    \label
+    \ref
+    \cite
+    \cref
+    \Cref
+    \eqref
+    \caption
+    \footnote
+}

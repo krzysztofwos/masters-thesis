@@ -1,0 +1,244 @@
+\chapter{Empirical Results}
+\label{ch:empirical-results}
+
+This chapter reports quantitative comparisons between MENACE, Active Inference variants, and tabular reinforcement-learning baselines. We summarise post-training validation metrics, trace learning dynamics, include ablations on state filters and restocking, and document variability arising from finite evaluation budgets and multi-seed runs. The empirical findings validate our theoretical correspondence and address Michie's question about optimal learning.
+
+Unless stated otherwise, agents train for 500 games (5,000 for the RL baselines) and are then evaluated via \emph{post-training validation} against an optimal (minimax) opponent. Results are aggregated over 10 independent seeds.
+
+\section{Performance Overview}
+
+As shown in Table~\ref{tab:performance-summary}, three key findings emerge from the aggregate post-training validation metrics across all agents with 500-game training budgets (unless otherwise noted).
+
+\begin{table}[htbp]
+	\caption{Aggregate post-training validation performance (mean $\pm$ SD across seeds). All draw/loss rates are measured against the optimal opponent; ``Regimen'' denotes the training schedule. Validation uses 100 games per seed (1\% resolution).}
+	\label{tab:performance-summary}
+	\centering
+	\small
+	\begin{tabularx}{\textwidth}{@{}L{3.6cm}lrrrY@{}}
+		\toprule
+		Algorithm                        & Regimen   & Draw (\%)       & Loss (\%)       & Seeds & Notes                            \\
+		\midrule
+		MENACE (restock box)             & mixed     & $84.5 \pm 8.1$  & $15.5 \pm 8.1$  & 10    & Mixed curriculum                 \\
+		Instrumental AIF ($\lambda = 0$) & optimal   & $88.1 \pm 3.9$  & $11.9 \pm 3.9$  & 10    & Train vs optimal                 \\
+		Hybrid AIF ($\lambda = 0.5$)     & optimal   & $85.2 \pm 4.2$  & $14.8 \pm 4.2$  & 10    & Train vs optimal                 \\
+		Pure AIF ($\lambda = 0.0$)       & optimal   & $79.7 \pm 6.5$  & $20.3 \pm 6.5$  & 10    & Train vs optimal                 \\
+		Pure AIF ($\lambda = 0.25$)      & optimal   & $79.1 \pm 4.8$  & $20.9 \pm 4.8$  & 10    & Train vs optimal                 \\
+		Pure AIF ($\lambda = 0.5$)       & optimal   & $77.0 \pm 3.7$  & $23.0 \pm 3.7$  & 10    & Train vs optimal                 \\
+		Oracle AIF ($\lambda = 0.5$)     & optimal   & $72.6 \pm 3.1$  & $27.4 \pm 3.1$  & 10    & Tree-derived policy (cache only) \\
+		Q-learning (random)              & random    & $98.0 \pm 1.2$  & $2.0 \pm 1.2$   & 10    & Train 5,000 games                \\
+		Q-learning (defensive)           & defensive & $10.2 \pm 30.9$ & $89.8 \pm 30.9$ & 10    & Train 5,000 games                \\
+		SARSA (random)                   & random    & $97.9 \pm 1.9$  & $2.1 \pm 1.9$   & 10    & Train 5,000 games                \\
+		SARSA (defensive)                & defensive & $20.5 \pm 40.3$ & $79.5 \pm 40.3$ & 10    & Train 5,000 games                \\
+		\bottomrule
+	\end{tabularx}
+\end{table}
+
+\section{Statistical Variability}
+
+Post-training validation uses 100 evaluation games per seed against a minimax opponent, so reported draw rates carry binomial noise of at most $0.5/\sqrt{100} = 5$ percentage points per seed (draw $\approx 0.5$ is the worst case). Aggregating over 10 seeds reduces this Monte Carlo uncertainty by $\sqrt{10}$; the remaining variability in Table~\ref{tab:performance-summary} largely reflects differences in training trajectories rather than evaluation noise. Multiple seeds are therefore essential: some curricula (e.g., defensive-only for RL) induce high variance across runs despite identical hyperparameters. Where seeds fail (e.g., degenerate no-restock runs), we note the conditional reporting explicitly.
+
+\section{Key Finding 1: Instrumental Equivalence}
+
+As summarised in Table~\ref{tab:performance-summary}, MENACE (Michie filter, box-level restocking) validates at $84.5 \pm 8.1\%$ draws against optimal play after 500 games, while the instrumental Active Inference baseline (AIF with $\lambda = 0$) achieves $88.1 \pm 3.9\%$. Because the two agents are trained under different regimens (mixed curriculum vs.~optimal-only),
+the cumulative training draw-rate trajectories in Figure~\ref{fig:menace-aif} should not be over-interpreted as a
+direct comparison. The policy-KL diagnostic in Figure~\ref{fig:menace-aif} is intended as a \emph{within-minimax-set
+	dispersion} measure on a fixed set of frequently visited canonical X-to-move states: for each such
+state $s$, we compute $D_{\KL}\!\big(\pi^{\mathrm{mm},U}_s \,\|\, \hat{\pi}_s\big)$, where
+$\pi^{\mathrm{mm},U}_s$ is the uniform distribution over minimax-optimal actions at $s$, and
+$\hat{\pi}_s$ is the empirical action-frequency distribution of the learned agent at $s$.
+In this forward direction, the divergence is finite only if $\hat{\pi}_s(a) > 0$ for \emph{all}
+minimax-optimal actions $a$ (i.e., for all actions in the support of $\pi^{\mathrm{mm},U}_s$);
+to avoid infinite KL we therefore omit states for which the empirical distribution assigns zero
+probability to \emph{any} minimax-optimal move. This omission biases the diagnostic toward states
+with adequate empirical support. Finally, note that lower values indicate closer agreement with
+the \emph{uniform} minimax mixture; higher values can also arise from specialisation among
+minimax-optimal moves and should not be interpreted as monotone convergence to minimax play.
+
+Taken together, these results are consistent with the theoretical mapping: once epistemic value is suppressed, the EFE-based policy update reduces to a purely instrumental objective, and MENACE's pseudo-count reinforcement implements a closely related form of instrumental optimisation under the Dirichlet--categorical interpretation. In practice, the update rules and scaling conventions differ (e.g., MENACE's bead reinforcement vs.\ EFE-weighted policy updates), so we expect close policy agreement rather than literal equality of internal weights.
+
+\begin{figure}[htbp]
+	\centering
+	\includegraphics[width=\textwidth]{figures/fig-menace-vs-aif.png}
+	\caption[MENACE vs.\ instrumental Active Inference comparison]{MENACE vs.\ instrumental AIF: cumulative \emph{training} draw rates (top; MENACE mixed curriculum vs.\ AIF optimal-only, 500 games), post-training validation vs.\ minimax (middle; 100 games per seed), and per-state policy KL $D_{\KL}(\pi^{\mathrm{mm},U}\|\hat{\pi})$ from the uniform minimax-optimal reference to the empirical action distribution (bottom). All panels aggregate 10 seeds.}
+	\label{fig:menace-aif}
+\end{figure}
+
+\section{Key Finding 2: The Value of Information}
+
+Activating epistemic value changes learning dynamics. As illustrated in Figure~\ref{fig:beta-sweep}, increasing $\lambda$ increases epistemic-value contributions and alters Pure Active Inference's learning trajectory. Within our 500-game budget, however, the epistemic variants do not outperform the $\lambda=0$ Pure AIF baseline on post-training validation (Table~\ref{tab:performance-summary}) and remain behind the strongest instrumental baselines.
+
+\begin{figure}[htbp]
+	\centering
+	\includegraphics[width=\textwidth]{figures/fig-beta-sweep.png}
+	\caption[Pure Active Inference $\lambda$-sweep results]{Pure AIF $\lambda$-sweep (0.0--0.5): draw-rate trajectories (left; 500 training games, 10 seeds, minimax opponent), and epistemic value contributions (right; $\lambda = 0$ and $\lambda = 0.5$). Post-training validation uses 100 games per seed vs.\ minimax.}
+	\label{fig:beta-sweep}
+\end{figure}
+
+This creates an apparent paradox: MENACE can outperform agents that explicitly optimise for information. The resolution lies in distinguishing the \emph{source} of exploration pressure:
+
+\begin{itemize}
+	\item \textbf{MENACE}: Implicit exploration via near-uniform initial counts; policy concentrates as relative bead proportions diverge (update magnitude shrinks as counts grow)
+	\item \textbf{Active Inference (fixed $\lambda$)}: Fixed trade-off coefficient between risk and information gain; the epistemic term itself typically shrinks as beliefs concentrate
+	\item \textbf{Oracle-style variants}: Remove some sources of uncertainty (e.g., opponent modelling) but still optimise the same objective, so performance can be limited by the objective's trade-off rather than by ignorance alone
+\end{itemize}
+
+Within our fixed training budget, the best epistemic variants still trail the top instrumental baselines by several percentage points (Table~\ref{tab:performance-summary}), instantiating Michie's phrase ``acquisition of information for future use at the expense of present expected gain.''
+
+\section{Key Finding 3: Robustness vs Specialisation}
+
+The reinforcement-learning baselines expose a pronounced robustness--specialisation trade-off under opponent shift. When trained against a single fixed opponent type, tabular temporal-difference (TD) methods can achieve excellent in-distribution performance yet fail to transfer to a stronger (or simply different) opponent. This effect is most visible under the defensive-opponent regimen: despite strong training performance against the defensive heuristic, both Q-learning and SARSA frequently collapse when validated against optimal play, yielding very low mean draw rates and extremely high seed-to-seed variance (Table~\ref{tab:performance-summary}). In contrast, training against a random opponent provides broader state-action coverage. With a larger budget of 5,000 games, both Q-learning and SARSA approach minimax-like play on frequently visited decision states and validate at roughly 98\% draws versus the optimal opponent (Table~\ref{tab:performance-summary}).
+
+These results clarify that robustness in turn-based games is strongly shaped by (i) the diversity of the training opponent distribution and (ii) the data budget available to achieve adequate state-space coverage.
+
+A key mechanism underlying MENACE's robustness is that the \emph{Dirichlet prior keeps all action probabilities strictly positive}. Even after many games, a move that was rarely successful retains a small but non-zero probability of being selected. In contrast, tabular TD methods can drive Q-values to extreme values that effectively zero out certain actions; if those actions become necessary against a different opponent, the policy cannot recover without retraining. The Dirichlet representation thus provides implicit ``insurance'' against distributional shift---a form of robustness that emerges from the generative model's structure rather than from explicit regularisation.
+
+This highlights a complementary strength of the MENACE and Active Inference agents studied here: they achieve competitive post-training validation performance with a much smaller training budget (500 games) by leveraging structured priors, explicit state abstraction (canonical filters), and---when enabled---explicit information-seeking terms in the objective.
+
+\section{Key Finding 4: Consistency with Minimax Equivalence}
+
+A fundamental prediction of game theory is von Neumann's minimax theorem~\cite{vonneumann1928theorie}: in zero-sum perfect-information games, worst-case reasoning (maximin) equals optimal play (minimax). Formally:
+\begin{equation}
+	\max_{\pi_1} \min_{\pi_2} U(\pi_1, \pi_2) = \min_{\pi_2} \max_{\pi_1} U(\pi_1, \pi_2)
+\end{equation}
+where $U$ is the utility function for Player~1. This theorem, which predates game theory's formal establishment~\cite{vonneumann1944theory}, implies that an agent assuming worst-case opponent behaviour should achieve the same performance as one assuming optimal opponent behaviour.
+
+To test whether this equivalence holds within our Active Inference implementation, we compare Oracle agents using different opponent models:
+
+\begin{itemize}
+	\item \textbf{Uniform}: Assumes the opponent plays uniformly at random over legal moves.
+	\item \textbf{Adversarial}: Assumes the opponent selects moves that maximise the agent's expected free energy (worst case for the agent).
+	\item \textbf{Minimax}: Uses the precomputed optimal opponent policy from the game tree.
+\end{itemize}
+
+All three Oracle variants have perfect knowledge of the game tree's action-outcome structure. They differ only in how they model opponent behaviour when computing expected outcomes.
+
+\subsection{Experimental Results}
+
+Table~\ref{tab:oracle-opponent} reports post-training validation performance for the three Oracle opponent models.
+
+\begin{table}[htbp]
+	\caption{Oracle Active Inference opponent model comparison (500 training games; validation vs optimal; 100 games per seed; 10 seeds).}
+	\label{tab:oracle-opponent}
+	\centering
+	\begin{tabular}{@{}lrrr@{}}
+		\toprule
+		Opponent Model     & Draw (\%) & Loss (\%) & SD (pp)   \\
+		\midrule
+		Oracle-Uniform     & 19.0      & 81.0      & $\pm 1.8$ \\
+		Oracle-Adversarial & 67.5      & 32.5      & $\pm 1.8$ \\
+		Oracle-Minimax     & 67.5      & 32.5      & $\pm 1.8$ \\
+		\bottomrule
+	\end{tabular}
+\end{table}
+
+The Adversarial and Minimax models achieve identical mean performance (67.5\% draws) with identical variance, yielding a 0.0 percentage-point difference. A two-sample comparison yields overlapping 95\% confidence intervals ([66.4\%, 68.6\%] for both), confirming no statistically significant difference ($p > 0.05$).
+
+\subsection{Interpretation}
+
+This result is consistent with the minimax equivalence between worst-case and optimal play in this setting:
+
+\begin{enumerate}
+	\item \textbf{Worst-case equals optimal}: The Adversarial model, which assumes the opponent always selects the action most harmful to the agent, achieves the same performance as the Minimax model, which uses the provably optimal opponent policy.
+
+	\item \textbf{Model specification dominates knowledge}: Both Adversarial and Minimax models achieve 3.55$\times$ higher draw rates than Uniform (67.5\% vs 19.0\%), despite all three having identical game tree knowledge. This is consistent with the Free Energy Principle's emphasis on correct generative models over raw data.
+
+	\item \textbf{Robust interpretation}: The Adversarial model adopts a worst-case interpretation while achieving the same performance as the optimal model, suggesting it may be suitable for applications where conservative assumptions are desirable.
+\end{enumerate}
+
+The convergence of Bayesian (Active Inference) and game-theoretic (minimax) approaches to the same equilibrium policy in this domain is consistent with theoretical expectations---both frameworks identify the same optimal behaviour through different mathematical formalisms in zero-sum perfect-information games.
+
+\section{Free Energy Trajectories}
+
+The expected free energy decomposition provides a qualitative lens on learning dynamics. Instrumental agents ($\lambda=0$) reduce expected risk without prospective information-gain terms, while epistemic variants ($\lambda>0$) trade off risk against expected information gain and can exhibit more exploratory phases early in training (Figure~\ref{fig:beta-sweep}).
+
+\section{Design Ablations}
+
+In addition to the main MENACE--AIF comparison, we ran ablation studies to test how sensitive MENACE's performance is to architectural choices such as the state filter and restocking strategy.
+
+\subsection{State Filter}
+
+The \texttt{Filter\_Effect} experiment compares the Michie filter (287 decision states) to a broader decision-only filter (304 states) under the same regimen and bead schedule. Both configurations achieve strong post-training validation performance against optimal play, with the Michie filter offering a modest advantage in sample efficiency relative to slightly larger state spaces. Results are summarised in Table~\ref{tab:filter-effect}.
+
+\begin{table}[htbp]
+	\caption{Filter effect on MENACE performance (500 training games; evaluation vs optimal; 100 games per seed).}
+	\label{tab:filter-effect}
+	\centering
+	\begin{tabular}{@{}lrrr@{}}
+		\toprule
+		Condition            & Seeds & Draw (\%)      & Loss (\%)      \\
+		\midrule
+		Michie filter        & 10    & $84.5 \pm 8.1$ & $15.5 \pm 8.1$ \\
+		Decision-only filter & 10    & $82.4 \pm 6.0$ & $17.6 \pm 6.0$ \\
+		\bottomrule
+	\end{tabular}
+\end{table}
+
+\subsection{Restock Strategy}
+
+The \texttt{Restock\_Strategy\_Comparison} experiment probes how different restocking schemes affect MENACE's behaviour:
+
+\begin{itemize}
+	\item \textbf{No restock} can leave matchboxes empty, producing degenerate policies.
+	\item \textbf{Move-level restock} (adding a single bead when a move becomes impossible) can underperform due to repeated local depletion.
+	\item \textbf{Box-level restock} (replenishing the entire matchbox when it empties) maintains strictly positive parameters and avoids pathological empty boxes.
+\end{itemize}
+
+Results are summarised in Table~\ref{tab:restock-strategy}.
+
+\begin{table}[htbp]
+	\caption{Restock strategy comparison for MENACE (500 training games; evaluation vs optimal; 100 games per seed).}
+	\label{tab:restock-strategy}
+	\centering
+	\begin{tabular}{@{}lrrr@{}}
+		\toprule
+		Strategy           & Seeds & Draw (\%)      & Loss (\%)      \\
+		\midrule
+		Box-level restock  & 10    & $84.5 \pm 8.1$ & $15.5 \pm 8.1$ \\
+		Move-level restock & 10    & $67.1 \pm 5.9$ & $32.9 \pm 5.9$ \\
+		No restock         & 6     & $88.5 \pm 6.0$ & $11.5 \pm 6.0$ \\
+		\bottomrule
+	\end{tabular}
+\end{table}
+
+Four ``no restock'' seeds did not produce a completed training summary or evaluation (runs terminated early after one or more matchboxes became empty), so the reported mean for ``no restock'' is conditional on the completed runs and should be interpreted with that selection effect in mind.
+
+Taken together, these ablations justify our choice of the Michie filter with box-level restocking as the main configuration: it preserves the theoretical Dirichlet semantics, prevents pathological empty boxes, and delivers competitive performance without sensitive hyperparameter tuning.
+
+\subsection{Convergence Characteristics}
+
+\begin{itemize}
+	\item MENACE: Smooth exponential decay
+	\item Active Inference: Step-like decreases with exploration phases
+	\item Q-Learning: Erratic, depends heavily on $\varepsilon$ schedule
+\end{itemize}
+
+\section{Statistical Analysis}
+
+We report post-training validation performance as mean $\pm$ standard deviation across seeds (Table~\ref{tab:performance-summary}). For interpretability, we also present learning curves and KL-to-minimax traces (Figure~\ref{fig:menace-aif}) rather than relying on formal significance testing as a primary evidential source.
+
+\section{Convergence Analysis}
+
+Under our interpretive mapping, we can give an informal convergence intuition for why MENACE and instrumental AIF tend to approach minimax-like behaviour on frequently visited states.
+
+\begin{remark}[Informal Convergence Intuition (not a theorem)]
+	\label{rem:convergence-intuition}
+	One useful way to read the learning dynamics is through a KL-type Lyapunov \emph{heuristic} over visited decision states. In our diagnostics we estimate a per-state divergence from a minimax reference policy using empirical action frequencies and skip states where the empirical distribution assigns zero probability to any minimax-optimal move (to avoid undefined KL). If we instead assume a smoothed, full-support policy estimate (e.g., by adding a small $\varepsilon$ to all actions) and a restocking scheme that keeps all matchbox parameters strictly positive, then repeated visitation primarily stabilises the empirical estimate $\hat{\pi}_s$ on the states encountered most often; the resulting divergence may converge to a non-zero constant (or even increase) if the learned policy specialises among minimax-optimal moves, since the reference is the uniform mixture over those moves.
+
+	This is not a formal convergence theorem: the argument depends on assumptions about state visitation, support (to keep KL finite), and update magnitudes, and it does not address unvisited or rarely visited states. The empirical curves in Figure~\ref{fig:menace-aif} are therefore used as evidence of convergence-like behaviour in practice, rather than as a proof of global optimality.
+\end{remark}
+
+\section{Summary of Empirical Findings}
+
+Our experiments provide quantitative answers to Michie's fundamental questions:
+
+\begin{enumerate}
+	\item \textbf{Is MENACE optimal?} Within a 500-game budget, MENACE moves toward minimax-like behaviour but remains below perfect play. It matches the strongest instrumental Active Inference baselines in post-training validation.
+
+	\item \textbf{What is the cost of information?} Epistemic agents can sacrifice short-horizon performance to gather information, quantifying the exploration--exploitation trade-off under an explicit EFE objective.
+
+	\item \textbf{How does MENACE compare to modern methods?} With a 500-game budget, MENACE and instrumental Active Inference achieve strong post-training validation against optimal play and avoid the catastrophic opponent-shift failures observed for defensive-trained tabular RL. With broader coverage and a larger budget, however, tabular RL trained against a random opponent can also approach minimax performance---highlighting differences in sample efficiency, distributional sensitivity, and interpretability rather than asymptotic capability.
+\end{enumerate}
+
+These findings validate our theoretical framework while revealing subtle advantages of MENACE's implicit exploration mechanism over explicit information-seeking strategies.
+
+The next chapter uses this empirical evidence to answer Michie's motivating question and to articulate the limits of the correspondence.

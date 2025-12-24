@@ -1,0 +1,32 @@
+\chapter{Canonical State Filters}
+\label{appendix:canonical-filters}
+
+To ensure reproducibility we record the canonical state counts and golden sets used throughout the experiments. These match the automated checks in the test suite (see \texttt{exact\_count\_validation.rs} and \texttt{double\_threat\_golden.rs} under \texttt{tests/}).
+
+\section{State-Filter Taxonomy}
+
+\begin{table}[htbp]
+	\caption{State filter definitions and counts.}
+	\label{tab:state-filters}
+	\centering
+	\small
+	\begin{tabular}{@{}lL{7.5cm}r@{}}
+		\toprule
+		Filter        & Description                                                       & Count \\
+		\midrule
+		All           & All canonical X-to-move states (no pruning).                      & 338   \\
+		Decision-only & States with more than one legal move (forced moves excluded).     & 304   \\
+		Michie        & Decision-only minus 17 double-threat positions (original design). & 287   \\
+		\bottomrule
+	\end{tabular}
+\end{table}
+
+All counts above refer to X-to-move canonical states. Michie's hardware played as O and opened the game, and the software maps between these conventions by swapping symbols and the player-to-move bit whenever MENACE or its baselines act.
+
+\texttt{All} is useful for exhaustive evaluation, \texttt{Decision-only} removes trivial continuations, and \texttt{Michie} reproduces the 1960s hardware footprint. The filters are implemented consistently across MENACE, Active Inference, and RL baselines.
+
+\section{Double-Threat Positions}
+
+The 17 double-threat positions excluded by the Michie filter are enumerated with visual board diagrams in Appendix~\ref{sec:double-threat-classes}. These positions represent board states at ply~6 where O has created a fork---two or more distinct winning threats that X cannot simultaneously block.
+
+For reference, the canonical labels (in \texttt{XXXXXXXXX\_P} format where \texttt{P} denotes player to move) are embedded in the repository at \texttt{resources/double\_threat\_positions.txt} and verified against the test suite (\texttt{double\_threat\_golden.rs}).

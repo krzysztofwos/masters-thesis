@@ -1,0 +1,141 @@
+\chapter{Discussion and Future Work}
+\label{ch:discussion-future-work}
+
+This chapter reflects on the correspondence between MENACE and Active Inference, drawing out design principles and concrete next steps. The emphasis is on technically grounded extensions rather than broad claims, with attention to the boundary conditions established in earlier chapters.
+
+We revisit Donald Michie's MENACE through the mathematical lens of Active Inference and the Free Energy Principle. The analysis yields four main insights that clarify the scope of the correspondence and point toward future directions.
+
+\section{Summary of Contributions}
+
+First, we established a precise mapping connecting MENACE's physical components to both classical reinforcement learning constructs and the random variables of Active Inference. Each matchbox corresponds to a hidden state, beads represent Dirichlet parameters, and the random draw implements posterior predictive probability matching.
+
+Second, we demonstrated that MENACE realises an \emph{instrumental} special case of Active Inference: its bead updates minimise expected free energy with epistemic value suppressed ($\lambda = 0$). This explains both its effectiveness and its limitations.
+
+Third, by situating the work within contemporary debates about the FEP, MENACE becomes a concrete, falsifiable example of how the framework can be applied responsibly. Rather than claiming MENACE ``is'' Active Inference, we show precisely how it maps to a restricted case.
+
+Fourth, our experiments translate these claims into quantitative evidence: MENACE and an instrumental Active Inference baseline match within seed-to-seed variation on post-training validation against optimal play (Table~\ref{tab:performance-summary}), epistemic variants change Pure Active Inference learning dynamics and increase epistemic-value contributions without outperforming the $\lambda=0$ baseline within our 500-game budget (Figure~\ref{fig:beta-sweep}), and tabular RL highlights the importance of curriculum and coverage: defensive-only training can collapse under opponent shift, while random-opponent training with a larger budget can approach minimax performance.
+
+\section{Limitations and Boundary Conditions}
+
+The correspondence between MENACE and Active Inference is deliberately scoped. It is exact for the particular combination of Tic-Tac-Toe, complete state enumeration, and the bead-based mechanics we have formalised, but several boundary conditions constrain how far the conclusions can be generalised.
+
+\subsection{Model Complexity}
+
+MENACE maintains no explicit model of its opponent beyond a simple prior over moves. By contrast, a full Active Inference agent would maintain structured beliefs about opponent strategies, allowing it to anticipate and adapt to systematic changes in play. Our oracle AIF baseline removes transition/outcome uncertainty by using the solved game tree, but it still evaluates actions under an assumed opponent-policy model (uniform in our runs). It is therefore a diagnostic for model misspecification rather than an upper bound on performance against optimal play.
+
+\subsection{Temporal Abstraction}
+
+MENACE operates at a single temporal scale: individual moves within a game. It cannot reason about multi-game curricula, meta-learning across opponents, or slower forms of structural change. Modern Active Inference architectures extend naturally to hierarchical and deep temporal models. MENACE approximates only the lowest layer of such hierarchies.
+
+\subsection{Epistemic Blindness}
+
+Although MENACE's Dirichlet beliefs track uncertainty, the agent never selects actions because they are informative. Exploration arises implicitly from near-uniform posterior means early in learning (when counts are small and symmetric), not from a prospective valuation of information---posterior variance shrinks concurrently but does not directly drive selection probability under probability matching. This epistemic blindness explains both MENACE's competitive short-horizon performance and the gap that remains to explicitly epistemic agents over longer horizons.
+
+\subsection{State Space Constraints}
+
+Our analysis relies on exhaustive enumeration of the canonical state space, which is feasible for Tic-Tac-Toe but not for larger games or continuous domains. Extending the MENACE--AIF correspondence to function approximation or very large state spaces will require additional assumptions and may alter some of the clean guarantees we obtain in the finite setting.
+
+\section{Design Principles}
+
+Our analysis reveals fundamental design principles that transcend MENACE's specific implementation:
+
+\subsection{Natural Exploration Through Uncertainty}
+
+Posterior predictive probability matching supplies implicit exploration without ad-hoc bonuses---even when epistemic value is not explicitly scored. MENACE demonstrates that representing uncertainty through probability distributions produces near-uniform action probabilities early in learning (when pseudo-counts are small and symmetric), while confident beliefs (higher pseudo-counts) concentrate action probabilities and support exploitation later on. Variance shrinks concurrently as a concomitant of concentration, but selection probability under probability matching is the posterior mean, not a direct function of variance. Modern AI systems can inherit this advantage by maintaining calibrated uncertainty estimates instead of relying solely on externally tuned exploration schedules.
+
+\subsection{Efficient Learning Through Conjugacy}
+
+The Dirichlet--categorical structure enables exact Bayesian updates without approximation or sampling. MENACE shows that choosing the right representational framework can make seemingly complex computations trivial. For modern systems, this suggests seeking conjugate representations where possible, or approximations that preserve the essential structure of exact inference.
+
+\subsection{Physical Interpretability}
+
+Bead counts directly represent belief strength, making MENACE's knowledge state completely transparent. Each bead is a unit of evidence, and the learning process is visible as the physical rearrangement of beads. This interpretability is increasingly important for modern AI systems, suggesting that we should prefer representations where learned parameters have clear semantic meaning.
+
+\subsection{Embodied Computation}
+
+MENACE performs Bayesian inference not through digital computation but through the physical process of random selection. This demonstrates that intelligence can emerge from the interaction between simple mechanisms and environmental feedback, without explicit reasoning or calculation.
+
+\subsection{Minimal Sufficient Structure}
+
+MENACE succeeds with just 287 matchboxes, showing that complex behaviour can emerge from minimal structure when that structure correctly captures the problem's essential features. In fully enumerable domains like Tic-Tac-Toe, this demonstrates that the right inductive biases can outweigh raw capacity---a principle that may apply more broadly to well-structured subproblems within larger systems.
+
+\section{Modern Applications}
+
+The MENACE-FEP correspondence suggests several promising directions:
+
+\subsection{Explicit Uncertainty Representation}
+
+Modern deep reinforcement learning often discards uncertainty information, maintaining only point estimates of values or policies. MENACE suggests maintaining full Dirichlet distributions (or suitable approximations) for discrete action spaces. Recent work on distributional RL~\cite{bellemare2017distributional} partially implements this principle but could go further in maintaining conjugate representations.
+
+\subsection{Hierarchical Extensions}
+
+MENACE operates at a single level of abstraction, but the principle extends naturally to hierarchical settings. Imagine multiple levels of matchboxes, where higher levels select sub-policies and lower levels select primitive actions. Each level maintains its own uncertainty representation, enabling hierarchical exploration and compositional learning.
+
+\subsection{The MENACE Decomposition as a Reusable Template}
+
+The algorithmic pattern extracted from MENACE---independent Dirichlet pseudo-counts over action tendencies, updated via scalar reinforcement and sampled via posterior predictive probability matching with trajectory-based credit assignment---provides a useful template for discrete domains. Compared to typical deep reinforcement learning pipelines, it offers unusually strong interpretability and an explicit uncertainty representation. The trade-off is that the approach depends on an explicit state abstraction and on design choices (priors, update magnitudes, and opponent/curriculum assumptions) that materially affect learning dynamics.
+
+\subsection{Hardware Implementations}
+
+MENACE's physical implementation suggests possibilities for neuromorphic or stochastic hardware that naturally implements probabilistic computation. Stochastic computing elements could implement probability matching directly through physical randomness, while physical reservoirs could maintain count-based representations.
+
+\subsection{Interpretable AI}
+
+MENACE's transparent operation---where every decision can be traced to specific beads---illustrates the value of representations where each parameter has clear meaning and influence.
+
+\section{Comparison with Modern Game-Playing AI}
+
+It is instructive to contrast MENACE with contemporary systems such as AlphaZero~\cite{silver2018alphazero}, which couple deep function approximation with Monte Carlo Tree Search to achieve superhuman performance in large games. These systems trade transparency for scalability: their learned representations are distributed across large parameter sets and are typically difficult to audit mechanistically.
+
+MENACE, by comparison, dispenses with search and function approximation. Its policy consists of explicit per-state Dirichlet pseudo-counts updated by a small set of reinforcement rules and sampled via probability matching. This makes MENACE a particularly suitable bridge case for Active Inference: it lets us isolate which behaviours follow from uncertainty-driven sampling and which require explicit epistemic terms or richer generative models.
+
+\section{Future Research Directions}
+
+\begin{itemize}
+	\item Connect-4 with partial enumeration, symmetry reduction, and heuristic rollouts to test scalability beyond full enumerability.
+	\item Richer observation models that incorporate noisy or partial board information to stress the identity-observation assumption.
+	\item Explicit opponent models and learning them online rather than fixing a prior.
+	\item Policy priors and structural priors that encode move-order preferences or game-theoretic constraints.
+\end{itemize}
+
+\subsection{Formal Optimisation of Initial Conditions}
+
+An interesting direction is to derive principled initial bead priors from a formal objective (e.g., Bayesian model reduction or an explicit EFE criterion) rather than hand-designing them. This would turn Michie's 4--3--2--1 schedule into a quantitative hypothesis: do priors that reflect the game's early branching structure improve sample efficiency, and can such priors be recovered automatically under reasonable assumptions?
+
+\subsection{Scaling to Larger Games}
+
+Connect-4, with a state space on the order of $10^{13}$ positions (depending on the counting convention), sits near the boundary of practical enumerability. It is large enough to require symmetry reduction and sampling, yet small enough that a carefully engineered abstraction might retain interpretability. Extending MENACE-style Dirichlet learning to this domain would provide a meaningful stress test of the approach.
+
+\subsection{Hybrid Architectures}
+
+Exploring architectures that combine MENACE's transparency with the planning power of modern systems like AlphaZero could yield systems that are both powerful and interpretable. For instance, using MENACE-style Dirichlet beliefs at leaf nodes of a search tree.
+
+\subsection{Adaptive Epistemic Weights}
+
+Our analysis suggests that a fixed epistemic weight $\lambda$ need not be optimal across learning phases. Future work should explore adaptive $\lambda$ schedules that mirror MENACE's implicit annealing, potentially recovering the elegant simplicity that made Michie's design so effective.
+
+\subsection{Physical Active Inference Systems}
+
+Can we identify other physical systems that naturally implement Active Inference? How can we design modern hardware that exploits these principles as elegantly as MENACE?
+
+Looking forward, the MENACE--FEP correspondence suggests several avenues for extending this programme while preserving the interpretability and reproducibility that make MENACE a useful bridge case.
+
+\section{Broader Implications}
+
+By revisiting a mechanically explicit learner, the thesis demonstrates how Active Inference concepts can be operationalised in a fully enumerable domain. This style of analysis encourages explicit modelling assumptions and provides concrete behavioural signatures that can be measured rather than asserted.
+
+The same approach may be applied to other minimalist or historically significant learning systems, where transparency allows competing theoretical interpretations to be compared under controlled experiments.
+
+Methodologically, grounding the Free Energy Principle in a concrete system highlights the importance of explicit modelling commitments. Active Inference becomes operational only when the generative model, preference structure, and epistemic weighting are specified, and only then can instrumental trade-offs be evaluated rather than remaining purely descriptive.
+
+\section{Philosophical Reflections}
+
+MENACE illustrates that a non-trivial portion of sequential decision-making can be realised by simple, interpretable mechanisms. In this thesis, the Dirichlet--categorical mapping makes this explicit: bead counts represent belief strength, and posterior predictive sampling converts uncertainty into exploration pressure. The analysis also highlights the role of modelling commitments: behaviour depends on how outcomes are valued, what is treated as uncertain, and what aspects of the environment are included in the generative model.
+
+In this sense, MENACE functions as a useful bridge case. It ties the expected-free-energy vocabulary to explicit computations and to measurable quantities in a fully enumerable setting, while clarifying which ingredients are absent (e.g., explicit epistemic planning over long horizons) and which would be required to scale to more complex domains.
+
+\section{Conclusion}
+
+This thesis used MENACE as a fully enumerable test bed for connecting a concrete learning mechanism to the Free Energy Principle and Active Inference. We provided a precise Dirichlet--categorical mapping of matchboxes and beads, derived an instrumental expected free energy special case corresponding to MENACE's learning rule, and validated the resulting correspondence empirically against Active Inference variants and tabular reinforcement learning baselines.
+
+The broader lesson is methodological: Active Inference becomes most informative when expressed as an explicit, testable computational objective under clearly stated modelling assumptions. Future work should extend this programme to richer opponent models, longer planning horizons, and larger games (e.g., Connect-4), while preserving the interpretability and reproducibility that make MENACE such a valuable bridge case.
