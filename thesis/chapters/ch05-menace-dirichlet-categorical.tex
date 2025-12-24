@@ -1,0 +1,231 @@
+\chapter{MENACE as a Dirichlet--Categorical Model}
+\label{ch:menace-dirichlet-categorical}
+
+This chapter formalises the correspondence between MENACE and a Dirichlet--categorical model. It makes explicit how beads instantiate Dirichlet concentrations, how probability matching implements posterior-predictive action selection, and how the reinforcement schedule operates as a quasi-Bayesian pseudo-count heuristic. The goal is to lay down the precise modelling assumptions that support the expected free energy interpretation in the next chapter.
+
+We now arrive at the heart of our analysis: demonstrating that MENACE, despite predating the mathematical frameworks discussed above by decades, can be understood in Dirichlet--categorical terms. The correspondence is \emph{exact for action selection}---drawing beads implements posterior-predictive probability matching under a Dirichlet prior, with bead counts acting as concentration parameters. The learning rule, however, is only \emph{Bayesian in spirit}: while bead additions align naturally with count-based updating, bead removal on losses is not a literal conjugate-posterior update and is better viewed as a preference-weighted correction/forgetting mechanism.
+
+To establish this correspondence rigorously, we must first describe MENACE's mechanism in detail, then show how each component maps to elements of the Bayesian framework. The beauty of this mapping lies not just in its mathematical precision but in its revelation that optimal Bayesian principles can emerge from simple physical mechanisms.
+
+\section{Formal Correspondence}
+
+MENACE consists of 287 matchboxes, each representing one of the ``essentially distinct'' positions that the opening player can encounter once board symmetries are factored out~\cite{michie1963experiments}. Each matchbox contains coloured beads, with colours corresponding to available moves in that position. Some modern reconstructions use the broader decision-only filter (304 states~\cite{mscroggs2019menace}), which retains the 17 double-threat positions while still pruning forced moves. Michie's original hardware followed the more selective 287-box design that excludes both forced moves and inevitable-loss positions. The learning mechanism is straightforward: when MENACE plays a game, it records the sequence of moves made. Upon game completion, it adjusts the bead counts based on the outcome.
+
+For clarity---and to align the historical build with our software---we reuse the All / Decision-only / Michie state filters introduced in Chapter~\ref{ch:menace-historical-context}. Appendix~\ref{appendix:canonical-filters} records their exact counts and the forced/double-threat positions that differentiate them. The experiments can therefore target the original hardware footprint, the common 304-box reconstruction, or the 338-box matchbox superset without duplicating definitions throughout the text.
+
+We now establish the mathematical correspondence between this physical system and a Dirichlet--categorical Bayesian model. The key identifications that structure the remainder of the section are summarised in Table~\ref{tab:menace-mapping}.
+
+\begin{table}[htbp]
+	\caption{Comparative mapping of MENACE, reinforcement learning, and Active Inference.}
+	\label{tab:menace-mapping}
+	\centering
+	\small
+	\begin{tabular}{@{}L{3.5cm}L{4cm}L{5cm}@{}}
+		\toprule
+		MENACE component                   & RL concept                                    & Active Inference construct                                      \\
+		\midrule
+		Matchbox for a board position      & State $s \in S$                               & Hidden state factor $s$                                         \\
+		Coloured beads in a matchbox       & Available actions $A(s)$                      & Admissible control states $u$ (discrete actions)                \\
+		Proportion of bead colours         & Stochastic policy $\pi(a\mid s)$              & Posterior beliefs over policies $q(\pi)$                        \\
+		Bead addition/removal              & Incremental credit assignment / value update  & Variational updates of policy beliefs by minimising free energy \\
+		Win (+3), draw (+1), loss (-1)     & Reward signal $R(s,a)$ or preference encoding & Prior preferences over outcomes encoded in the $C$ vector       \\
+		Shaking the box and drawing a bead & Sampling from policy (probability matching)   & Action selection by sampling from $q(\pi)$                      \\
+		\bottomrule
+	\end{tabular}
+\end{table}
+
+The rows highlight the central interpretive challenge: explaining why MENACE's retrospective bead updates, which depend only on terminal rewards, can be cast as the minimisation of variational free energy---a procedure usually described as prospective belief updating.
+
+\begin{definition}[MENACE State Space]
+	\label{def:menace-state}
+	MENACE's state space consists of:
+
+	\begin{itemize}
+		\item \textbf{States $S$}: The set of unique board configurations reachable during play, totalling 287 matchboxes in Michie's construction after accounting for rotational and reflective symmetries~\cite{michie1963experiments}. Each state $s \in S$ represents a specific arrangement of crosses and noughts on the board where it is MENACE's turn to play. Historically MENACE opened as O; for consistency with our software and canonical X-to-move counts, we relabel MENACE as the X player in the remainder of this thesis.
+
+		\item \textbf{Actions $A(s)$}: The set of legal moves available in state $s$, corresponding to empty squares on the board. Each action $a \in A(s)$ represents placing an X in a specific position under our convention (equivalently, placing an O in Michie's original physical build).
+
+		\item \textbf{Outcomes $O$}: The set $\{\text{win}, \text{draw}, \text{loss}\}$ representing possible game endings from MENACE's perspective.
+	\end{itemize}
+\end{definition}
+
+The genius of Michie's design lies in how this state space naturally decomposes the game tree into independent decision problems, each solved by a separate matchbox. This decomposition is crucial for the Bayesian interpretation that follows.
+
+\begin{definition}[Bead-Dirichlet Correspondence]
+	\label{def:bead-dirichlet}
+	For each state $s$, the beads in the corresponding matchbox define a Dirichlet distribution over action probabilities:
+
+	\begin{equation}
+		\theta_s \sim \Dir(\alpha_s)
+	\end{equation}
+
+	where:
+
+	\begin{itemize}
+		\item $\alpha_s = (\alpha_{s,1}, \ldots, \alpha_{s,|A(s)|})$ is the vector of bead counts
+		\item $\alpha_{s,a}$ equals the number of beads of the colour representing action $a$ in matchbox $s$
+		\item $\theta_s = (\theta_{s,1}, \ldots, \theta_{s,|A(s)|})$ represents the probabilities of selecting each action
+	\end{itemize}
+
+	This correspondence is exact for action selection: each physical bead contributes one unit of Dirichlet concentration, and random bead draws implement posterior predictive probability matching under a Dirichlet--categorical model. The learning update rules are best read as an interpretable pseudo-count mechanism: bead additions correspond to positive utility-weighted pseudo-observations, while bead removal on losses is a preference-driven penalty/forgetting heuristic rather than literal probabilistic conditioning.
+\end{definition}
+
+Because Tic-Tac-Toe is fully enumerable, we can characterise the entire decision space exactly. Exhaustive breadth-first enumeration produces 255,168 distinct legal games, which collapse to 26,830 canonical trajectories once the eight symmetries of the square are factored out. The outcome histogram is 131,184 X wins, 77,904 O wins, and 46,080 draws, matching the verification harness described in Appendix~\ref{ch:appendix-game tree}. These counts provide the reference distribution against which we compare MENACE, Active Inference baselines, and reinforcement-learning agents in later chapters.
+
+\paragraph{Algorithm (MENACE update loop).}
+
+\begin{enumerate}
+	\item Canonicalise the observed board to the chosen state filter (All / Decision-only / Michie) and open the corresponding matchbox (state) $s$.
+	\item Sample an action by drawing a bead uniformly at random \emph{from the matchbox} (so $q(a\mid s)=\alpha_{s,a}/\sum_{a'}\alpha_{s,a'}$) and play the move coded by its colour.
+	\item Record the trajectory of visited state--action pairs $(s,a)$ under the chosen canonicalisation.
+	\item On reaching a terminal outcome $o\in\{\text{win},\text{draw},\text{loss}\}$, update each visited $(s,a)$ according to the reinforcement schedule:
+	      \begin{itemize}
+		      \item win: $\alpha_{s,a}\leftarrow \alpha_{s,a}+3$
+		      \item draw: $\alpha_{s,a}\leftarrow \alpha_{s,a}+1$
+		      \item loss: $\alpha_{s,a}\leftarrow \alpha_{s,a}-1$
+	      \end{itemize}
+	\item If restocking is enabled, apply it after loss updates according to the configured scheme:
+	      \begin{itemize}
+		      \item \textbf{Move-level restock:} if a move's weight reaches $0$, reset that move's weight to its configured initial value for the source state.
+		      \item \textbf{Box-level restock:} if all outgoing weights from a state are depleted, restock the entire matchbox to its initial schedule.
+	      \end{itemize}
+\end{enumerate}
+
+\paragraph{Positivity of pseudo-counts (Dirichlet domain).}
+Under the Dirichlet--categorical interpretation (Definition~\ref{def:dirichlet}), the concentration parameters
+satisfy $\alpha_{s,a} > 0$ for all actions $a$. The loss update $\alpha_{s,a} \leftarrow \alpha_{s,a}-1$
+should therefore be read as a \emph{depletion} rule that is paired with a positivity mechanism:
+in our implementation, decremented counts are never allowed to become negative, and when restocking
+is enabled it is applied immediately after loss updates so that stored matchbox weights remain
+strictly positive. Unless explicitly noted otherwise, MENACE results reported in Part~III use a
+restocking configuration (e.g., box-level restock), ensuring the Dirichlet model remains well-defined
+throughout training.
+
+\begin{theorem}[MENACE implements Posterior Predictive Probability Matching]
+	\label{thm:probability-matching}
+	MENACE's action selection mechanism implements posterior predictive probability matching for a Dirichlet--categorical policy, an implicit exploration mechanism related to but distinct from canonical Thompson sampling.
+\end{theorem}
+
+\begin{proof}
+	When MENACE selects an action in state $s$, it draws a bead uniformly at random from matchbox $s$. If the matchbox contains $\alpha_{s,a}$ beads of the colour corresponding to action $a$, then the probability of selecting action $a$ is:
+
+	\begin{equation}
+		P(a\mid s) = \frac{\alpha_{s,a}}{\sum_{a' \in A(s)} \alpha_{s,a'}} = \frac{\alpha_{s,a}}{\alpha_{s,0}}
+	\end{equation}
+
+	where $\alpha_{s,0} = \sum_{a'} \alpha_{s,a'}$ is the total number of beads.
+
+	This selection probability is exactly the posterior predictive distribution for a categorical variable with a Dirichlet prior:
+
+	\begin{equation}
+		P(a\mid s) = \int \theta_{s,a} \cdot p(\theta_s\mid\alpha_s) d\theta_s = \E_{\Dir(\alpha_s)}[\theta_{s,a}] = \frac{\alpha_{s,a}}{\alpha_{s,0}}
+	\end{equation}
+
+	This is probability matching under the posterior predictive distribution. Importantly, this differs from canonical Thompson sampling~\cite{thompson1933likelihood,agrawal2012analysis}, which would:
+
+	\begin{enumerate}
+		\item Sample parameters: $\theta_s \sim \Dir(\alpha_s)$
+		\item Select action: $a = \arg\max_{a'} \theta_{s,a'}$
+	\end{enumerate}
+
+	The key distinction is that MENACE samples directly from the expected probabilities (probability matching), while Thompson sampling first samples parameters then selects the maximum (parameter sampling followed by optimisation).
+
+	The two mechanisms differ in how exploration arises. Under Thompson sampling, posterior variance directly influences selection: high-variance actions are more likely to occasionally yield sampled parameters that exceed competitors. Under posterior-predictive probability matching, selection probability is simply $\alpha_{s,a}/\alpha_{s,0}$---the posterior mean, not a function of variance. Exploration in MENACE arises because early pseudo-counts are typically small and near-symmetric, making action probabilities close to uniform; as reinforcement accumulates, relative counts diverge and the policy concentrates. What decays with experience is the magnitude of policy updates (each $\pm1$ or $\pm3$ becomes a smaller fractional change), not sampling stochasticity per se. Probability matching explores more smoothly and naturally implements mixed strategies, while Thompson sampling is more decisive and always selects a single best action given the sampled parameters.
+
+	For game-playing contexts like Tic-Tac-Toe, MENACE's probability matching may actually be superior to canonical Thompson sampling, as it:
+
+	\begin{itemize}
+		\item Naturally implements mixed strategies important in game theory
+		\item Avoids deterministic play that could be exploited by opponents
+		\item Provides more robust exploration in the face of model misspecification
+	\end{itemize}
+\end{proof}
+
+\section{Update Rules as Bayesian Inference}
+
+Having established that MENACE's action selection implements posterior predictive probability matching, we now turn to its learning mechanism. Michie's original design specified asymmetric update rules: adding three beads for wins, one for draws, and removing one for losses. These seemingly ad hoc choices turn out to implement a sophisticated form of utility-weighted Bayesian inference.
+
+\begin{remark}[MENACE Updates as Quasi-Bayesian Pseudo-count Updates]
+	\label{rem:updates}
+	MENACE's reinforcement rules can be interpreted as a utility-weighted pseudo-count update scheme that resembles Dirichlet--categorical inference. However, because losses \emph{decrement} counts, the update is not a conjugate Bayesian posterior update in the strict sense. It is best understood as a performance-driven heuristic that introduces a form of preference-weighted forgetting.
+\end{remark}
+
+\begin{remark}[Derivation Sketch (not a proof)]
+	In standard Bayesian inference with Dirichlet priors, observing outcome $a$ in state $s$ leads to the update:
+
+	\begin{equation}
+		\alpha_{s,a} \rightarrow \alpha_{s,a} + 1
+	\end{equation}
+
+	This corresponds to accumulating evidence in the form of counts. MENACE's update rules deviate from this standard form:
+
+	\begin{itemize}
+		\item Win: $\alpha'_{s,a} = \alpha_{s,a} + 3$
+		\item Draw: $\alpha'_{s,a} = \alpha_{s,a} + 1$
+		\item Loss: $\alpha'_{s,a} = \alpha_{s,a} - 1$
+	\end{itemize}
+
+	The decrement on losses breaks conjugacy: under a Dirichlet--categorical model, Bayesian updates only increment pseudo-counts. The correspondence is therefore interpretive (quasi-Bayesian), not a literal posterior identity.
+
+	To understand these rules from a Bayesian perspective, we interpret them as observing pseudo-data weighted by utilities. Specifically, we can view the updates as:
+
+	\begin{itemize}
+		\item Win: Observing 3 instances of a ``success'' signal for action $a$ in state $s$
+		\item Draw: Observing 1 instance of a weak ``success'' signal
+		\item Loss: Decrementing a pseudo-count (a preference-driven penalty; not a conjugate Bayesian update)
+	\end{itemize}
+
+	This interpretation is best read as a utility-weighted pseudo-count heuristic: it preserves the Dirichlet--categorical representation while allowing outcomes to reinforce or penalise actions in proportion to their utility. The utility function implicit in MENACE's rules is:
+
+	\begin{equation}
+		U(\text{outcome}) = \begin{cases}
+			3  & \text{if win}  \\
+			1  & \text{if draw} \\
+			-1 & \text{if loss}
+		\end{cases}
+	\end{equation}
+
+	This utility function embodies reasonable preferences: wins are strongly preferred, draws are weakly rewarded (positive reinforcement, but less than wins), and losses are penalised. The asymmetry (3 for wins vs $-1$ for losses) implements a form of optimism bias that encourages exploration early in learning while still allowing convergence to optimal play.
+
+	Importantly, the ability to decrease counts (remove beads) for losses represents a departure from pure Bayesian updating, which would only accumulate evidence. This mechanism can be understood as implementing a form of ``unlearning'' or belief revision, allowing MENACE to correct early mistakes more rapidly than pure count accumulation would permit.
+\end{remark}
+
+\section{The MENACE Decomposition Algorithm}
+
+MENACE does not merely implement probability matching---it illustrates a reusable modelling pattern for sequential decision-making under uncertainty: represent local action tendencies as Dirichlet pseudo-counts, sample actions by posterior predictive probability matching, and update pseudo-counts by outcome-weighted reinforcement. We formalise this pattern as the MENACE Decomposition Algorithm (MDA), which should be understood as a practical template rather than a general optimality guarantee:
+
+\begin{definition}[MENACE Decomposition Algorithm (MDA)]
+	\label{def:mda}
+	For any sequential decision problem with discrete states $S$ and actions $A$:
+
+	\begin{enumerate}
+		\item \textbf{State Decomposition:} For each state $s$, maintain a Dirichlet belief $q(\theta_s) = \Dir(\alpha_s)$ over action-probability vectors $\theta_s$. Action selection uses the posterior-predictive categorical $q(a\mid s) = \E[\theta_{s,a}] = \alpha_{s,a}/\alpha_{s,0}$.
+
+		\item \textbf{Action Selection:} At state $s$, select $a$ with probability $\alpha_{s,a}/\alpha_{s,0}$ (probability matching from the posterior predictive).
+
+		\item \textbf{Trajectory Recording:} Store sequence $\tau = \{(s_0, a_0), \ldots, (s_T, a_T)\}$.
+
+		\item \textbf{Credit Assignment:} Upon outcome $o$ with utility $U(o)$, update:
+		      \begin{equation}
+			      \alpha_{s,a} \leftarrow \alpha_{s,a} + U(o) \quad \forall (s,a) \in \tau
+		      \end{equation}
+		      After each update, clamp $\alpha_{s,a} \ge \epsilon > 0$ to maintain a valid Dirichlet; if a matchbox is depleted, apply the configured restocking policy (see Chapter~\ref{ch:experimental-design}).
+
+		\item \textbf{Iteration:} Repeat from step 2.
+	\end{enumerate}
+\end{definition}
+
+\begin{remark}
+	Negative updates (removing beads for losses) are a reinforcement heuristic and do not correspond to standard conjugate Bayesian updating. This mechanism can be understood as implementing a form of preference-weighted forgetting that accelerates unlearning of poor moves.
+\end{remark}
+
+This algorithm yields a state-wise Bayesian bandit-style learner while maintaining only $O(|S| \times |A|)$ parameters---a massive reduction from the $O(|S|^T)$ complexity of exact dynamic programming. Formal regret guarantees apply cleanly to Thompson sampling, while comparable worst-case bounds are not established for posterior-mean probability matching. In this thesis we therefore treat the strongest claims about optimality as empirical rather than theorem-level.
+
+\begin{observation}[State-wise Bandits]
+	\label{obs:mda}
+	With MENACE's per-state Dirichlet beliefs and probability matching---sampling actions in proportion to posterior means---each state behaves like a Bayesian multi-armed bandit. Thompson sampling is known to achieve $O(\sqrt{T\log T})$ regret in many such settings~\cite{agrawal2012analysis}, but analogous worst-case bounds are \emph{not} established for posterior-mean probability matching. Nevertheless, applying the update independently per state yields strong empirical performance in Tic-Tac-Toe while keeping the parameter count to $O(|S|\times|A|)$.
+\end{observation}
+
+\section{Summary}
+
+This chapter mapped MENACE's components to a Dirichlet--categorical model, highlighted the quasi-Bayesian nature of its update rule (including the non-conjugate loss decrement), and provided an explicit update-loop algorithm. The next chapter interprets these mechanics as a special case of expected free energy minimisation with epistemic value suppressed.

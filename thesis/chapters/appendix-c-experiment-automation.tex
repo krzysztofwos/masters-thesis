@@ -1,0 +1,85 @@
+\chapter{Experiment Automation}
+\label{appendix:experiment-automation}
+
+This appendix records the commands used to reproduce the experimental outputs reported in this thesis. The workflow is Makefile-driven and uses the Python experiment driver under \texttt{scripts/automation/}.
+
+\section{End-to-end pipeline}
+
+From the repository root, the following command builds the release binary, runs the thesis experiment suite, performs post-training evaluations, and regenerates aggregate summaries and reports:
+
+\begin{verbatim}
+make thesis-results
+\end{verbatim}
+
+The thesis experiment configuration is version-controlled at:
+
+\begin{itemize}
+	\item Training configuration: \texttt{configs/thesis\_experiments.yaml}
+	\item Evaluation configuration: \texttt{configs/evaluate\_thesis.yml}
+\end{itemize}
+
+To run stages separately:
+
+\begin{verbatim}
+make release               # cargo build --release
+make thesis-results-run    # run thesis experiments + evaluations
+make thesis-results-report # analyze + regenerate reports
+\end{verbatim}
+
+\section{Building the thesis PDF}
+
+The LaTeX sources are under \texttt{thesis/}. To build the PDF (requires a Japanese-capable TeX toolchain):
+
+\begin{verbatim}
+make -C thesis
+\end{verbatim}
+
+\section{Packaging results for external audit (optional)}
+
+To package a minimal subset of seed-level outputs (excluding large binaries) into a deterministic ZIP with checksums:
+
+\begin{verbatim}
+make thesis-package-minimal
+\end{verbatim}
+
+To additionally include per-seed training traces (\texttt{metrics.jsonl}) and selected EFE export CSVs:
+
+\begin{verbatim}
+make thesis-package-curves
+\end{verbatim}
+
+\section{Smoke test}
+
+To validate the toolchain without running the full experiment suite, the following short train/evaluate cycle should complete quickly:
+
+\begin{verbatim}
+cargo build --release
+
+./target/release/menace train menace \
+  --games 50 \
+  --opponent random \
+  --output menace_smoke.msgpack
+
+./target/release/menace evaluate menace_smoke.msgpack \
+  --games 50 \
+  --opponent random \
+  --seed 0
+\end{verbatim}
+
+Note: \texttt{--output} writes a serialised agent file (MessagePack format), while \texttt{--summary} writes JSON summaries.
+
+\section{Generated artefacts}
+
+The pipeline produces:
+
+\begin{itemize}
+	\item \texttt{menace\_data/<run>/<condition>/seed\_<n>/training\_summary.json} --- per-seed training summaries
+	\item \texttt{menace\_data/<run>/<condition>/seed\_<n>/evaluation.json} --- per-seed post-training evaluation exports
+	\item \texttt{results/analysis\_summary.json} --- aggregated training metrics
+	\item \texttt{results/evaluation\_summary.json} --- aggregated evaluation metrics
+	\item \texttt{menace\_reports/} --- generated report figures (PNG) for the specified run directories
+\end{itemize}
+
+\section{Reproducibility}
+
+Experiments use explicit random seeds (0--9 by default). The experiment suite is fully specified by the configuration files above and the repository revision; running \texttt{make thesis-results} on the same codebase therefore reproduces the same directory structure and seed-level artefacts, up to expected stochastic variation when seeds are changed.

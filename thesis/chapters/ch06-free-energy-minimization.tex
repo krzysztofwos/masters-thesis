@@ -1,0 +1,54 @@
+\chapter{Free Energy Minimisation in MENACE}
+\label{ch:free-energy-minimization}
+
+This chapter interprets MENACE's bead updates as a special case of expected free energy minimisation. We restrict attention to the instrumental term (epistemic value suppressed), clarify the minimal generative model needed to support this interpretation, and connect the discrete count updates to preference-weighted policy shaping.
+
+We interpret MENACE's learning dynamics through the lens of variational free energy. The claim is intentionally modest: MENACE minimises expected free energy under a \emph{restricted} generative model in which the only adjustable beliefs concern preferences over outcomes. Under this interpretation, MENACE realises the instrumental component of Active Inference while omitting explicit epistemic drives.
+
+\section{Recap: deterministic expected free energy}
+
+Chapter~\ref{ch:free-energy-principle} defined expected free energy (EFE) for discrete systems and showed that, when observations are deterministic (e.g., the board state is perfectly observed), the \emph{canonical} perceptual ambiguity term $\E_{q(s\mid\pi)}[H(p(o\mid s))]$ vanishes. In our experiments we score policies in terms of terminal outcomes, which remain uncertain under an unknown opponent; this uncertainty can be optionally penalised via an outcome-entropy weight $\beta_{\mathrm{amb}}$ (Chapter~\ref{ch:epistemic-vs-instrumental}). For the MENACE correspondence we fix $\beta_{\mathrm{amb}} = 0$, leaving
+
+\begin{equation}
+	G_\lambda(\pi) = \underbrace{-\E_{q(o\mid\pi)}[\ln p(o\mid C)]}_{\text{expected negative log preference}} - \lambda \underbrace{I(o;\theta)}_{\text{epistemic value}},
+\end{equation}
+
+\noindent The expected negative log preference differs from the KL-divergence risk term $D_{\KL}(q\|p)$ by an additive entropy $H[q(o\mid\pi)]$. Chapter~\ref{ch:epistemic-vs-instrumental} clarifies this relationship and the implementation choice to use $\mathrm{Risk}(\pi) = D_{\KL}(q(o\mid\pi)\|p(o\mid C))$.
+
+The mutual information term $I(o;\theta)$ is computed exactly via the Dirichlet--categorical expression \texttt{dirichlet\_categorical\_mi($\alpha$)} described in Chapter~\ref{ch:mathematical-preliminaries}. MENACE implements the special case $\lambda = 0$: it updates its bead counts solely in proportion to the log-preferences encoded by the reinforcement schedule and therefore suppresses epistemic value altogether. Active Inference (AIF) agents with non-zero $\lambda$---introduced in Chapter~\ref{ch:epistemic-vs-instrumental}---will reinstate this term and thereby provide the comparative baseline needed to answer Michie's question about optimal learning.
+
+\subsection{Interpretation in this task}
+
+\begin{itemize}
+	\item \textbf{Policy Dirichlet (MENACE/workspace):} one Dirichlet vector $\boldsymbol{\alpha}^{\pi}_s$ per state over actions, inducing $q(a\mid s)$ via the posterior predictive. MENACE updates these counts heuristically via reinforcement and sets $\lambda=0$ (no explicit epistemic term).
+	\item \textbf{Opponent-policy Dirichlet (hybrid AIF):} one Dirichlet vector $\boldsymbol{\alpha}^{\text{opp}}_s$ per \emph{opponent-to-move} state over opponent actions, inducing $q(a_{\text{opp}}\mid s)$. When $\lambda>0$, the epistemic term is expected information gain about these opponent-policy parameters from observing opponent moves.
+	\item \textbf{Outcome-model Dirichlet (pure AIF):} one Dirichlet vector $\boldsymbol{\alpha}^{\text{out}}_{s,a}$ per state-action over terminal outcomes $o\in\{\text{win},\text{draw},\text{loss}\}$, inducing $q(o\mid s,a)$. When $\lambda>0$, the epistemic term is expected information gain about these outcome-model parameters from observing terminal outcomes.
+\end{itemize}
+
+\section{Instrumental updates as preference-weighted policy shaping}
+
+Although MENACE lacks an explicit generative model, its mechanics imply the minimal $(A,B,C,D)$ structure required by discrete Active Inference. The observation model is identity (the board is fully observable), transitions follow the known game rules with a simple opponent prior, the $C$ vector is proportional to the utilities $\{+3,+1,-1\}$, and the policy is represented by Dirichlet beliefs over categorical action distributions (the bead counts). After each game, every visited state-action pair receives a uniform increment of $+3$, $+1$, or $-1$ depending on the terminal outcome. This is equivalent to a heuristic finite-difference step on the risk term above: utilities shift the Dirichlet concentration parameters in the direction that increases $\ln p(o\mid C)$ and, because the epistemic term is absent, no additional correction is required (compare the continuous-time derivation in~\cite{friston2016active}). In other words, MENACE applies a utility-weighted pseudo-count update that reshapes policy in the direction of preferred outcomes. This thesis does not claim the bead update is an exact gradient step of a variational objective; rather, it is a mechanically simple update whose direction is aligned with reducing instrumental risk under the modelling commitments stated above.
+
+Practical reconstructions retain a small restocking budget (e.g., replenishing empty matchboxes) to ensure every $\alpha_{s,a}$ remains strictly positive, so that the Dirichlet semantics of the belief update stay well-defined.
+
+\section{Practical implementation}
+
+The computational experiments mirror this interpretation. The training workspace maintains one Dirichlet vector per canonical state (with filters selectable between All/338, Decision-only/304, and Michie/287), applies reinforcement in the preferred units, and provides exact evaluations of risk, epistemic value (\texttt{dirichlet\_categorical\_mi}), and KL-regularised optimal policies. Chapters~\ref{ch:epistemic-vs-instrumental} and~\ref{ch:experimental-design} leverage this machinery to compare MENACE with Active Inference agents that include the epistemic term and with reinforcement-learning baselines such as tabular Q-learning.
+
+\section{Learning Dynamics as Utility-Modulated Updates}
+
+The reinforcement update can be viewed as a \emph{utility-modulated pseudo-count update}: positive reinforcement increases the relative mass assigned to chosen actions, while negative reinforcement suppresses them subject to the restocking policy. This is not, in general, an exact Bayesian posterior update; rather, it is a practical mechanism that reshapes the agent's policy in response to outcomes while maintaining a compact state-wise representation.
+
+MENACE's bead mechanics therefore implement a special case of preference-weighted policy shaping under the instrumental expected free energy interpretation ($\lambda = 0$). The Dirichlet parameters are literally the bead counts in each matchbox, and the reinforcement schedule
+
+\begin{itemize}
+	\item +3 beads for wins
+	\item +1 bead for draws
+	\item removal of 1 bead for losses
+\end{itemize}
+
+produces discrete updates that increase alignment with the preference distribution encoded in $C$. Each completed game adjusts the relevant $\alpha_{s,a}$ parameters along the trajectory, with the epistemic contribution suppressed by fixing $\lambda = 0$ in $G_\lambda(\pi)$. This is why MENACE's bead mechanics can be viewed as utility-modulated policy shaping rather than as exact Bayesian inference.
+
+\section{Summary}
+
+This chapter interpreted MENACE's bead updates as preference-weighted steps on instrumental expected free energy under a minimal generative model with fully observed states and suppressed epistemic value. The next chapter reinstates epistemic value to compare instrumental and information-seeking Active Inference variants against MENACE.

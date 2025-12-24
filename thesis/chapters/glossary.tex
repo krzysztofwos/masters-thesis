@@ -1,0 +1,32 @@
+\chapter{Glossary of Technical Terms}
+\label{ch:glossary}
+
+\begin{description}
+
+	\item[Active Inference] A framework for understanding perception and action as processes that minimise free energy through both belief updating and action selection.
+
+	\item[Conjugate prior] A prior distribution that, when combined with a particular likelihood function, yields a posterior in the same family. The Dirichlet is conjugate to the categorical distribution.
+
+	\item[Dirichlet distribution] A multivariate generalisation of the Beta distribution that describes uncertainty over probability simplexes. Parameters can be interpreted as pseudo-counts.
+
+	\item[Expected free energy] A quantity that evaluates future policies by combining pragmatic value (achieving preferred outcomes) with epistemic value (reducing uncertainty).
+
+	\item[Free Energy Principle (FEP)] The theory that adaptive systems minimise variational free energy, thereby implicitly minimising surprise and maintaining their structural integrity.
+
+	\item[Generative model] A probabilistic model of how observations are generated from hidden states, actions, and parameters.
+
+	\item[KL divergence] Kullback-Leibler divergence measures the difference between two probability distributions, quantifying information lost when approximating one distribution with another.
+
+	\item[MENACE] Matchbox Educable Noughts And Crosses Engine, a mechanical learning device built from matchboxes and beads that learns to play Tic-Tac-Toe.
+
+	\item[Policy] A mapping from states to actions or a sequence of planned actions. In MENACE, this is the strategy for selecting moves.
+
+	\item[Probability matching] A decision strategy where actions are sampled according to their posterior predictive probabilities. In MENACE, this means drawing beads with probability $\alpha_{s,a}/\alpha_{s,0}$, providing implicit exploration via posterior predictive sampling (no explicit epistemic-value bonus) and differing from Thompson sampling by skipping the parameter-sampling step.
+
+	\item[Risk (Active Inference)] The instrumental term in expected free energy. In this thesis it is instantiated as $D_{\KL}(q(o\mid\pi)\,\|\,p(o\mid C))$ over terminal outcomes (win/draw/loss), which differs from the cross-entropy form by an additive entropy term.
+
+	\item[Ambiguity] The outcome-entropy component $H[q(o\mid\pi)]$ in the EFE decomposition. When risk is scored as KL divergence, weighting ambiguity separately changes the net emphasis on outcome entropy; all experiments in this thesis set $\beta_{\mathrm{amb}}=0$.
+
+	\item[Variational free energy] An upper bound on surprise (negative log evidence) that can be minimised to perform approximate Bayesian inference.
+
+\end{description}

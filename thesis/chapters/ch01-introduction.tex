@@ -1,0 +1,61 @@
+\chapter{Introduction}
+\label{ch:introduction}
+
+This chapter frames the problem motivating the thesis, states the research questions, and explains why MENACE is a suitable bridge between historical reinforcement learning mechanisms and contemporary Active Inference. The aim is to set expectations, delimit scope, and establish the terminology and structure followed in the remaining chapters.
+
+\section{Motivation and central issue}
+
+Multiple computational implementations of Active Inference exist for discrete settings, including pymdp~\cite{heins2022pymdp}, ActiveInference.jl~\cite{nehrer2025activeinferencejl}, and various scalable approximations. However, end-to-end agents whose planning and learning derive from a single expected free energy objective---without importing RL-style value functions or ad hoc exploration bonuses---remain comparatively rare in mainstream benchmarking. Most practical systems mix reinforcement-learning-style value updates with heuristic exploration, making it difficult to determine which behaviours genuinely arise from EFE minimisation.
+
+Tic-Tac-Toe offers a tractable counterexample: every state can be enumerated, enabling exact accounting of preferences, beliefs, and exploration pressure. This thesis uses MENACE as a compact, fully analysable case study to clarify what is already ``Active Inference-like'' in a simple learning system and where explicit epistemic objectives change the exploration--exploitation trade-off.
+
+Donald Michie's Machine Educable Noughts And Crosses Engine (MENACE)~\cite{michie1963experiments} is particularly suited to this purpose. Built from matchboxes and beads, it sidesteps perception by enumerating states and focuses solely on reinforcement---an architectural choice that makes it an ideal Rosetta Stone for connecting a physical learner to the Free Energy Principle (FEP) and Active Inference. We adopt an objective, falsifiable stance: the goal is to expose where the correspondence holds, which modelling commitments are required, and where the analogy breaks down.
+
+\section{Research questions and scope}
+
+\begin{itemize}
+	\item How can MENACE's matchboxes, beads, and update rules be mapped to the random variables and update equations of Active Inference under the FEP?
+	\item Which aspects of exploration--exploitation in MENACE arise implicitly from posterior uncertainty, and which would require explicit epistemic objectives?
+	\item How do instrumental ($\lambda = 0$) and epistemic ($\lambda > 0$) Active Inference variants compare to MENACE and tabular reinforcement learning baselines in a fully enumerable game?
+	\item What limits apply to this correspondence (e.g., opponent modelling choices, preference specification, evaluation budget)?
+\end{itemize}
+
+The scope is deliberately narrow: we study Tic-Tac-Toe, finite-horizon play, and discrete-state Active Inference formulations. No claims are made about neuroscientific plausibility or performance beyond the stated domain.
+
+\section{Contributions}
+
+\begin{itemize}
+	\item A definition-before-use mapping between MENACE, reinforcement learning constructs, and Active Inference variables, aligned to a consistent notation (formalised in Chapter~\ref{ch:mathematical-preliminaries}).
+	\item A precise statement of the minimal generative model under which MENACE realises an instrumental special case of EFE minimisation ($\lambda = 0$), clarifying which assumptions are required.
+	\item Clarification of historical and implementation details (state filters, bead schedules, reinforcement semantics) that resolves common ambiguities about reproducing MENACE.
+	\item An experimental comparison of MENACE, instrumental/epistemic Active Inference variants, and tabular reinforcement learning baselines under controlled curricula, with ablations on state filters and restocking.
+	\item Public artifacts---tables, figures, and code---that make the correspondence reproducible and auditable.
+\end{itemize}
+
+\section{Thesis outline}
+
+Part~I introduces the mathematical preliminaries, the expected free energy decomposition, and MENACE's historical context. Part~II constructs the MENACE--Active Inference correspondence explicitly. Part~III specifies the experimental design and reports empirical results. Part~IV draws conclusions, states limitations, and outlines concrete directions for future work.
+
+\section{Historical framing}
+
+The problem of understanding how intelligent systems learn from experience has occupied researchers since the inception of both psychology and computer science. A particularly illuminating approach emerged in 1961 when Michie constructed MENACE. The device demonstrated that a purely mechanical system could learn to play Tic-Tac-Toe at near-optimal levels through reinforcement of successful strategies. Situated within the broader trial-and-error lineage from animal conditioning to modern reinforcement learning~\cite{suttonbarto2018,suttonRLHistory}, MENACE challenged the prevailing belief that a program could never outperform its programmer~\cite{michie1966gameplayingautomata}.
+
+Michie's own accounts were explicit about what MENACE did and did not mechanise. In ``Trial and Error'' he split learning into ``classification of the stimulus'' and ``reinforcement of the response,'' acknowledging that the former was ``quite extraordinarily complicated'' but that reinforcement ``is much more tractable'' once the discrete situations can be enumerated. MENACE sidesteps the classification challenge by enumerating every board pattern and focuses solely on reinforcement---an architectural choice that makes the system ideal for a Dirichlet--categorical analysis.
+
+In parallel, theoretical neuroscience has advanced a complementary account of adaptive behaviour. The Free Energy Principle (FEP), as formulated by Friston and colleagues, posits that adaptive systems act to minimise variational free energy, a quantity that bounds surprise or prediction error~\cite{friston2009reinforcement,friston2017active}. The FEP has attracted attention for its promise to unify perception, action, and learning; it has also generated debate about scope, falsifiability, and explanatory ambition~\cite{bowers2012bayesian,gershman2019free,nave2025drive}. By placing MENACE within this framework, we can evaluate concrete, falsifiable claims about how much of MENACE's behaviour is explained by an instrumental EFE objective and how much would require explicit epistemic drives or richer generative models.
+
+\section{Michie's motivating question}
+
+\begin{quote}
+	In simple games for which individual storage of all past board positions is feasible, is any optimal learning algorithm known? \ldots\ The difficulty lies in costing the acquisition of information for future use at the expense of present expected gain. A means of expressing the value of the former in terms of the latter would lead directly to the required algorithm.~\cite{michie1966gameplayingautomata}
+\end{quote}
+
+Because Tic-Tac-Toe admits exhaustive enumeration, the Free Energy Principle provides exactly such a cost accounting: risk (the instrumental preference term, scored as cross-entropy or KL divergence depending on decomposition) and epistemic value (Dirichlet--categorical mutual information) share common units, allowing us to quantify how much information MENACE gathers by chance and how much an explicit epistemic drive would add.
+
+\section{Trial-and-error lineage}
+
+MENACE emerged from a lineage of trial-and-error machines linking behavioural psychology, cybernetics, and contemporary reinforcement learning. Thorndike's puzzle boxes framed learning as the gradual strengthening of stimulus--response associations, and early cybernetic projects---such as Grey Walter's tortoises---explored mechanical reinforcement with minimal internal state~\cite{suttonRLHistory}. Michie's motivation followed this pattern: by enumerating every board position, MENACE could skip the perceptual classification problem and focus solely on reinforcement. This historical through-line underscores why Tic-Tac-Toe, with its finite decision space, is an ideal laboratory for connecting MENACE to the Bayesian formalism of the Free Energy Principle.
+
+\section{Summary}
+
+This chapter posed the problem of interpreting MENACE through Active Inference, stated the research questions, and outlined the contributions and structure of the thesis. The next chapter introduces the mathematical preliminaries and the shared notation that the remainder of the document follows.

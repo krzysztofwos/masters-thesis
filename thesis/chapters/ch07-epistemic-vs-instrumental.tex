@@ -1,0 +1,219 @@
+\chapter{Epistemic vs Instrumental Learning}
+\label{ch:epistemic-vs-instrumental}
+
+This chapter reintroduces epistemic value into the expected free energy objective, contrasts it with MENACE's purely instrumental updates, and analyses how varying the epistemic weight $\lambda$ changes learning dynamics. The emphasis is on definition-before-use: clarifying how risk, ambiguity, and mutual information terms are instantiated in the Tic-Tac-Toe setting and how they are implemented in the software experiments.
+
+Having established that MENACE implements a special case of Active Inference with suppressed epistemic value, we now explore what happens when this epistemic component is reinstated. This comparison illuminates the fundamental trade-off between exploitation (maximising immediate rewards) and exploration (gathering information for future benefit)---precisely the challenge Michie identified in his 1966 question about ``costing the acquisition of information for future use at the expense of present expected gain.''
+
+\section{Expected Free Energy Decomposition}
+
+Modern Active Inference evaluates policies by their \emph{expected free energy} (EFE). Throughout this thesis we adopt the standard convention: policies are selected by \emph{minimising} $G(\pi)$. In our implementation we score policies in terms of terminal outcomes $o\in\{\text{win},\text{draw},\text{loss}\}$, which remain uncertain under an unknown opponent even when board observations are perfectly accurate. With this choice of outcomes, a convenient decomposition is:
+
+\begin{equation}
+	G(\pi)
+	= \underbrace{-\,\E_{q(o\mid\pi)}[\ln p(o\mid C)]}_{\text{expected negative log preference (cross-entropy)}}
+	\;+\;\beta_{\mathrm{amb}}\,\underbrace{H[q(o\mid\pi)]}_{\text{outcome ambiguity}}
+	\;-\;\lambda\,\underbrace{I(o;\theta)}_{\text{epistemic value}}.
+\end{equation}
+
+\begin{remark}[Implementation Note]
+	In our software implementation we instantiate the instrumental term as a KL divergence between the predicted terminal-outcome distribution and the preference distribution:
+
+	\begin{equation}
+		\mathrm{Risk}(\pi)=D_{\KL}\!\bigl(q(o\mid\pi)\,\|\,p(o\mid C)\bigr)=\sum_o q(o\mid\pi)\ln\frac{q(o\mid\pi)}{p(o\mid C)}.
+	\end{equation}
+
+	This differs from the cross-entropy form $-\E_{q(o\mid\pi)}[\ln p(o\mid C)]$ by an additive entropy term: $-\E_{q}[\ln p]=D_{\KL}(q\|p)+H[q]$. Consequently, when risk is defined as KL divergence, adding a separate outcome-entropy ``ambiguity'' term changes the net weighting on $H[q]$. In the thesis experiments we set $\beta_{\mathrm{amb}}=0$ to avoid introducing an additional outcome-entropy contribution beyond the explicit mutual-information term, and to isolate the effect of $\lambda$ in the ablations.
+\end{remark}
+
+The risk term scores how well a policy is expected to realise preferences encoded in $C$. The outcome-ambiguity term captures uncertainty over terminal outcomes induced by opponent uncertainty. The epistemic-value term $I(o;\theta)$ quantifies expected information gain about model parameters $\theta$ (in our case, Dirichlet--categorical beliefs) and enters with a negative sign because information gain is sought under minimisation of $G$.
+
+In this thesis we instantiate $I(\cdot;\cdot)$ in two distinct ways: in the \emph{hybrid} agent it is expected information gain about an opponent-policy Dirichlet from observing opponent actions, whereas in the \emph{pure} agent it is expected information gain about an outcome-model Dirichlet from observing terminal outcomes.
+
+\section{The Lambda Parameter: Quantifying Information Value}
+
+In our experimental framework, we introduce the epistemic weight $\lambda \ge 0$ to control the balance between instrumental and epistemic objectives:
+
+\begin{equation}
+	G_\lambda(\pi) = \mathrm{Risk}(\pi) - \lambda\, I(o;\theta),
+\end{equation}
+
+where $\mathrm{Risk}(\pi)$ is the KL divergence defined in the Implementation Note above, and $I(o;\theta)$ is the mutual information between outcomes and model parameters, computed exactly via the Dirichlet--categorical expression described in Chapter~\ref{ch:mathematical-preliminaries}.
+
+The implementation separates this epistemic weight $\lambda$ from the softmax temperature used to regularise the policy distribution. The latter appears in the code as $\lambda_{\text{policy}}$ (CLI flag \texttt{--policy-lambda}, default 0.25). Throughout our experiments we vary only the epistemic weight $\lambda \in \{0, 0.25, 0.5\}$, keep $\lambda_{\text{policy}} = 0.25$, and set $\beta_{\mathrm{amb}} = 0$.
+
+This formulation allows us to investigate a spectrum of agents:
+
+\begin{itemize}
+	\item \textbf{$\lambda = 0$ (Instrumental only)}: Purely instrumental objective (no epistemic term). Exploration can still arise from stochastic policy selection. Closest in objective form to MENACE's instrumental emphasis, while remaining algorithmically distinct.
+	\item \textbf{$0 < \lambda < 1$ (Mixed)}: Balances immediate rewards with information gathering
+	\item \textbf{$\lambda = 1$ (Balanced)}: Equal weight to instrumental and epistemic value
+	\item \textbf{$\lambda > 1$ (Epistemic-heavy)}: Prioritises information over immediate rewards
+\end{itemize}
+
+\section{Worked Numerical Example}
+
+To make the objective concrete, consider a single canonical state $s$ with three legal actions
+$a_1,a_2,a_3$. In the \emph{pure} Active Inference agent we maintain a Dirichlet outcome model
+for each action. Suppose the learned outcome counts (win, draw, loss) are:
+
+\[
+	\alpha_{s,a_1} = (6,2,2),\quad
+	\alpha_{s,a_2} = (3,5,4),\quad
+	\alpha_{s,a_3} = (9,1,1).
+\]
+
+The predictive distributions are $q(o\mid s,a)=\alpha_{s,a}/\sum_i \alpha_{s,a,i}$. Using the
+preference distribution $p(o\mid C) = (0.60, 0.35, 0.05)$, $\beta_{\mathrm{amb}}=0$, and
+$\lambda = 0.25$, we compute the KL risk and the Dirichlet--categorical mutual information
+term $I(o;\theta)$ as implemented in the code. Table~\ref{tab:efe-worked-example} summarises
+the resulting values (in nats).
+
+\begin{table}[htbp]
+	\caption{Worked EFE example for one state with three actions ($\lambda=0.25$). Values are rounded to three decimals (nats).}
+	\label{tab:efe-worked-example}
+	\centering
+	\small
+	\begin{tabular}{@{}lccrrr@{}}
+		\toprule
+		Action & $\alpha_{s,a}$ & $q(o\mid s,a)$     & Risk $D_{\mathrm{KL}}$ & $I(o;\theta)$ & $G(a)$ \\
+		\midrule
+		$a_1$  & (6,2,2)        & (0.60, 0.20, 0.20) & 0.165                  & 0.091         & 0.143  \\
+		$a_2$  & (3,5,4)        & (0.25, 0.42, 0.33) & 0.486                  & 0.079         & 0.467  \\
+		$a_3$  & (9,1,1)        & (0.82, 0.09, 0.09) & 0.186                  & 0.077         & 0.166  \\
+		\bottomrule
+	\end{tabular}
+\end{table}
+
+Policy selection then applies the KL-regularised softmax with $\lambda_{\text{policy}}=0.25$
+and a uniform prior:
+
+\[
+	q(a\mid s) \propto \exp\!\left(-\frac{G(a)}{\lambda_{\text{policy}}}\right),
+\]
+
+yielding $q(a_1)=0.458$, $q(a_2)=0.125$, $q(a_3)=0.416$.
+The workspace stores these as matchbox weights by scaling with
+$\texttt{policy\_to\_beads\_scale}=100$, giving approximately $(46, 13, 42)$ beads for
+$(a_1,a_2,a_3)$. This is the policy distribution sampled in subsequent games; further training
+updates the Dirichlet counts and recomputes $G(a)$ in the same way.
+
+\section{MENACE as a Purely Instrumental Agent}
+
+MENACE's learning rule depends exclusively on terminal outcomes (win, draw, loss). This corresponds to optimising only the instrumental term of the EFE with preferences proportional to the bead reinforcement schedule. There is no mechanism that scores policies for the information they might reveal about the opponent or the dynamics of the game; the probabilities of actions change only retrospectively based on achieved outcomes.
+
+The initial ``exploration'' produced by MENACE's uniform bead counts is therefore incidental rather than epistemically motivated. Sampling from a symmetric Dirichlet prior ensures that all legal moves are tried early on, but once sufficient evidence accumulates, MENACE greedily exploits the moves associated with higher returns. In Active Inference language, the epistemic contribution to policy evaluation is set to zero:
+\[
+	G(\pi)\approx \mathrm{Risk}(\pi) = D_{\KL}\!\bigl(q(o\mid\pi)\,\|\,p(o\mid C)\bigr),
+\]
+i.e., optimisation reduces to the purely instrumental risk term.
+
+This observation resolves the apparent tension between MENACE's model-free appearance and Active Inference's model-based formalism. MENACE can be seen as an \emph{instrumental special case} of Active Inference: the generative model includes prior preferences but entertains only a trivial model of the environment (a flat prior over opponent moves). Consequently, MENACE exemplifies how belief-based control reduces to classical reinforcement when epistemic drives are suppressed.
+
+\section{The Cost of Information: Empirical Quantification}
+
+Our experiments provide a precise quantification of the information-performance trade-off. The results are striking:
+
+\subsection{Instrumental Equivalence ($\lambda = 0$)}
+
+MENACE (Michie filter, box-level restocking) and the instrumental Active Inference baseline (AIF with $\lambda = 0$) achieve \emph{broadly comparable} post-training validation performance against optimal play within the 500-game budget (Table~\ref{tab:performance-summary}). However, the cumulative training draw-rate trajectories in Figure~\ref{fig:menace-aif} should \emph{not} be interpreted as an apples-to-apples comparison: MENACE is trained under a mixed curriculum, whereas the instrumental AIF baseline is trained directly against the optimal opponent. The policy-KL diagnostic in Figure~\ref{fig:menace-aif} should be read as a \emph{within-minimax-set specialisation} measure rather than a monotone convergence score. Formally, for each canonical state $s$ we define
+\begin{equation}
+	D_{\KL}(\pi^{\mathrm{mm},U}_s\|\hat{\pi}_s)
+	= \sum_{a} \pi^{\mathrm{mm},U}_s(a)\ln\frac{\pi^{\mathrm{mm},U}_s(a)}{\hat{\pi}_s(a)},
+	\quad
+	\pi^{\mathrm{mm},U}_s(a)=\begin{cases}
+		1/|A_s^*| & a\in A_s^*       \\
+		0         & \text{otherwise}
+	\end{cases}
+\end{equation}
+where $A_s^*$ is the set of minimax-optimal moves in state $s$ and $\hat{\pi}_s$ is the empirical action-frequency estimate. To avoid infinite KL in this forward direction, we omit states for which $\hat{\pi}_s$ assigns zero probability to any minimax-optimal move.
+
+This supports the central correspondence: setting $\lambda = 0$ removes epistemic incentives from the EFE objective, leaving a purely instrumental criterion under which MENACE-style Dirichlet pseudo-count reinforcement and the instrumental AIF update can converge to similar solutions in this domain. Residual performance differences are plausibly attributable to regimen choice (mixed vs.\ optimal), stochasticity, and implementation details rather than a qualitative mismatch in objective.
+
+\subsection{The Epistemic Spectrum ($\lambda > 0$)}
+
+As we increase $\lambda$ from 0 to 0.5, we observe a shift from purely instrumental optimisation toward more information-seeking behaviour:
+
+\begin{itemize}
+	\item \textbf{$\lambda = 0.0$}: Purely instrumental baseline for Pure AIF
+	\item \textbf{$\lambda = 0.25$}: Moderate epistemic drive
+	\item \textbf{$\lambda = 0.5$}: Stronger epistemic drive
+\end{itemize}
+
+As shown in Figure~\ref{fig:beta-sweep}, varying $\lambda$ changes Pure AIF's learning trajectory and increases epistemic-value contributions. In our 500-game budget, however, the epistemic variants do not outperform the $\lambda=0$ Pure AIF baseline on post-training validation (Table~\ref{tab:performance-summary}) and remain behind the strongest instrumental baselines.
+
+\subsection{The Information Gap}
+
+Within our fixed training budget, the best epistemic variants still trail the top instrumental baselines by several percentage points (Table~\ref{tab:performance-summary}). This gap instantiates Michie's phrase ``acquisition of information for future use at the expense of present expected gain'': under the EFE objective, an agent can rationally sacrifice immediate outcomes in exchange for reducing posterior uncertainty, even when that trade-off is suboptimal for maximising short-horizon game outcomes.
+
+\section{Implicit vs Explicit Exploration}
+
+This comparison reveals a deeper architectural insight about exploration mechanisms:
+
+\subsection{MENACE's Implicit Exploration}
+
+MENACE's superiority stems not from ignoring exploration but from handling it implicitly through its Dirichlet mechanism. The Dirichlet parameters naturally implement an adaptive exploration-exploitation trade-off:
+
+\begin{itemize}
+	\item \textbf{Low bead counts}: Near-uniform posterior means $\to$ exploration (variance is high concurrently, but selection probability under probability matching is the posterior mean, not a function of variance)
+	\item \textbf{High bead counts}: Concentrated posterior means $\to$ exploitation (variance shrinks concurrently as beliefs sharpen)
+\end{itemize}
+
+This automatic annealing emerges from the mathematics of Bayesian updating---no scheduling required. The posterior standard deviation of Dirichlet components shrinks as $O(1/\sqrt{n})$ where $n$ is the number of observations, so posterior predictive sampling becomes progressively less stochastic as evidence accumulates. This describes shrinkage of uncertainty, not a worst-case bound on regret or on the probability of selecting suboptimal actions.
+
+\subsection{Active Inference's Explicit Exploration}
+
+By contrast, Active Inference agents with a fixed $\lambda$ apply a constant \emph{weight} to epistemic value, but the epistemic term itself typically \emph{shrinks} as beliefs concentrate: for Dirichlet--categorical models, mutual information decreases as uncertainty collapses. Fixed $\lambda$ therefore does not imply a constant exploration bonus; rather, it fixes the trade-off coefficient between goal realisation and information gain, which can still be suboptimal if the appropriate balance changes across training phases.
+
+\section{Relation to Modern Exploration Strategies}
+
+The MENACE-AIF comparison illuminates broader principles in exploration strategies:
+
+\subsection{Count-Based Exploration}
+
+Modern algorithms like UCB use explicit exploration bonuses:
+
+\begin{equation}
+	b(s,a) = \kappa\sqrt{\frac{\ln t}{N(s,a)}}
+\end{equation}
+
+where $\kappa>0$ sets the exploration scale.
+
+Dirichlet posterior variance provides a natural uncertainty diagnostic:
+
+\begin{equation}
+	\text{Var}[\theta_{s,a}] = \frac{\alpha_{s,a}(\alpha_{s,0} - \alpha_{s,a})}{\alpha_{s,0}^2(\alpha_{s,0} + 1)}
+\end{equation}
+
+Both quantities decay as evidence accumulates, but MENACE does not add an explicit variance bonus; instead, probability matching samples from posterior-mean proportions, and exploration fades as those proportions concentrate and as fractional updates shrink.
+
+\subsection{Thompson Sampling vs Probability Matching}
+
+While Thompson sampling would:
+
+\begin{enumerate}
+	\item Sample parameters: $\theta_s \sim \Dir(\alpha_s)$
+	\item Select action: $a = \arg\max_{a'} \theta_{s,a'}$
+\end{enumerate}
+
+MENACE's probability matching directly samples from expected probabilities. This explores more smoothly and naturally implements mixed strategies---crucial for game-playing contexts where deterministic policies can be exploited.
+
+\section{Implications for Optimal Learning}
+
+Our analysis suggests several principles for optimal learning in discrete domains:
+
+\begin{enumerate}
+	\item \textbf{Uncertainty-driven exploration can be sufficient}: explicit epistemic weighting does not automatically improve short-horizon outcomes in this domain
+
+	\item \textbf{Information has diminishing returns}: The epistemic value contribution decreases as posterior uncertainty reduces
+
+	\item \textbf{Domain structure matters}: Game-playing requires mixed strategies that probability matching naturally provides
+
+	\item \textbf{Simple mechanisms can embody sophisticated principles}: MENACE's beads implement effective Bayesian exploration without explicit computation
+\end{enumerate}
+
+These insights answer Michie's question not with a single algorithm but with a framework for understanding the exploration-exploitation trade-off. The ``means of expressing the value of the former in terms of the latter'' is precisely the $\lambda$ parameter in expected free energy---but optimal learning requires this parameter to adapt as learning progresses, something MENACE achieves implicitly through its physical mechanism.
+
+\section{Summary}
+
+This chapter decomposed expected free energy into risk, ambiguity, and epistemic terms for the Tic-Tac-Toe setting, contrasted MENACE's implicit exploration with explicit epistemic weighting, and analysed how varying $\lambda$ affects learning dynamics. The next chapter specifies the experimental design used to compare MENACE, Active Inference variants, and reinforcement-learning baselines under matched protocols.

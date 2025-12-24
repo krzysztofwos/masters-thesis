@@ -1,0 +1,165 @@
+%------------------------------------------------------------------------------
+\documentclass[master,oneside,english]{cimt}
+% Options:
+%   master/doctor - thesis type
+%   oneside/twoside - printing style
+%   english - use English for all fixed text
+
+% Packages
+\usepackage[dvipdfmx]{graphicx}
+\usepackage{xurl}                   % better line breaks for long URLs
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{amsthm}
+\usepackage{mathtools}              % extends amsmath
+\usepackage{bm}                     % bold maths symbols
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{array}                  % enhanced column specifications
+
+% Left-aligned paragraph column (avoids awkward justification in narrow columns)
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
+% Left-aligned X column for tabularx
+\newcolumntype{Y}{>{\raggedright\arraybackslash}X}
+\usepackage[dvipdfmx,table]{xcolor}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage[dvipdfmx,hidelinks]{hyperref}
+\usepackage[nameinlink,capitalise,noabbrev]{cleveref}
+\usepackage{microtype}              % microtypography (reduces overfull boxes)
+\usepackage{csquotes}               % proper quote handling
+
+% Theorem environments
+\newtheorem{theorem}{Theorem}[chapter]
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{remark}[theorem]{Remark}
+\newtheorem{observation}[theorem]{Observation}
+
+% Prevent awkward hyphenation of key acronyms
+\hyphenation{MENACE}
+
+% Custom commands for the thesis
+% Probability / expectation
+\newcommand{\E}{\mathbb{E}}
+\newcommand{\Prob}{\mathbb{P}}
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\N}{\mathbb{N}}
+
+% Core operators
+\newcommand{\KL}{\mathrm{KL}}
+\newcommand{\EFE}{\mathrm{EFE}}
+
+% Distributions
+\newcommand{\Dir}{\mathrm{Dir}}
+\newcommand{\Cat}{\mathrm{Cat}}
+
+% Thesis-specific quantities
+\newcommand{\Risk}{\mathrm{Risk}}
+
+% Use "Figure" in captions (not "Fig.") to match prose and cleveref noabbrev
+\makeatletter
+\renewcommand{\fnum@figure}{Figure~\thefigure}
+\makeatother
+
+% Title (English)
+\etitle{MENACE as a Bayesian Observer:\\A Technical Analysis through the Free Energy Principle}
+
+% Title (Japanese) - required even for English thesis
+\jtitle{ベイズ観測者としてのMENACE：\\自由エネルギー原理による技術的分析}
+
+% Author (English)
+\eauthor{Krzysztof Wo\'{s}}
+
+% Author (Japanese)
+\jauthor{ヴォシュ クリストフ}
+
+% Supervisor
+\supervisor{Professor Hideki Nakayama}
+
+% Submission date (Year, Month)
+\handin{2026}{2}
+
+\begin{document}
+
+% Cover pages
+\maketitle
+
+% Frontmatter
+\frontmatter
+
+% Abstract (English first for English thesis)
+\begin{eabstract}
+	\input{chapters/abstract-en.tex}
+\end{eabstract}
+
+% Abstract (Japanese)
+\begin{jabstract}
+	\input{chapters/abstract-ja.tex}
+\end{jabstract}
+
+% Table of Contents
+\tableofcontents
+
+% List of Figures (optional)
+\listoffigures
+
+% List of Tables (optional)
+\listoftables
+
+% Mainmatter
+\mainmatter
+
+% Part I: Theoretical Foundations
+\part{Theoretical Foundations}
+\input{chapters/ch01-introduction.tex}
+\input{chapters/ch02-mathematical-preliminaries.tex}
+\input{chapters/ch03-free-energy-principle.tex}
+\input{chapters/ch04-menace-historical-context.tex}
+
+% Part II: The Correspondence
+\part{The Correspondence}
+\input{chapters/ch05-menace-dirichlet-categorical.tex}
+\input{chapters/ch06-free-energy-minimization.tex}
+\input{chapters/ch07-epistemic-vs-instrumental.tex}
+
+% Part III: Computational Analysis
+\part{Computational Analysis}
+\input{chapters/ch08-experimental-design.tex}
+\input{chapters/ch09-empirical-results.tex}
+\input{chapters/ch10-answering-michies-question.tex}
+
+% Part IV: Implications
+\part{Implications}
+\input{chapters/ch11-discussion-future-work.tex}
+
+% Backmatter
+\backmatter
+
+% Publications (optional)
+% \pubUseLongName % Use "Publications and Research Activities" as title
+% \begin{publications}
+% \input{chapters/publications.tex}
+% \end{publications}
+
+% Bibliography
+\bibliographystyle{unsrturl}        % prints URL/DOI fields (unlike plain unsrt)
+\bibliography{references}
+
+% Acknowledgements
+\begin{acknowledgements}
+	\input{chapters/acknowledgements.tex}
+\end{acknowledgements}
+
+% Appendix
+\appendix
+
+\input{chapters/appendix-a-canonical-filters.tex}
+\input{chapters/appendix-b-game-tree.tex}
+\input{chapters/appendix-c-experiment-automation.tex}
+\input{chapters/appendix-d-dirichlet-entropy.tex}
+\input{chapters/glossary.tex}
+
+\end{document}

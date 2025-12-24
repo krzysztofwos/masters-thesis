@@ -1,0 +1,184 @@
+\chapter{Game-Tree Enumeration and State Space Analysis}
+\label{ch:appendix-game tree}
+
+This appendix provides the complete enumeration of the Tic-Tac-Toe state space and explains the relationship between the canonical counts 287, 304, and 338 that appear in the MENACE literature.
+
+\section{Canonical State Space Counts}
+
+The enumeration harness used in Chapter~\ref{ch:menace-dirichlet-categorical} confirms the canonical counts for Tic-Tac-Toe:
+
+\begin{itemize}
+	\item Total legal games: 255,168
+	\item Canonical trajectories (up to $D_4$ symmetry): 26,830
+	\item Outcome histogram: 131,184 X wins, 77,904 O wins, 46,080 draws
+	\item Length distribution:
+	      \begin{itemize}
+		      \item 5 moves: 1,440 games
+		      \item 6 moves: 5,328 games
+		      \item 7 moves: 47,952 games
+		      \item 8 moves: 72,576 games
+		      \item 9 moves: 127,872 games
+	      \end{itemize}
+\end{itemize}
+
+These values match both classical analyses and the automated test suite. They provide the reference distribution for computing policy KL divergences, coverage metrics, and expected free energy components in the comparative experiments.
+
+\section{The Mathematics of 287, 304, and 338}
+
+Michie's 1963 paper states that MENACE contained ``every one of the 287 essentially distinct positions which the opening player can encounter''~\cite{michie1963experiments}. This section derives that figure and clarifies related counts.
+
+\subsection{Definition of Essential Distinctness}
+
+Michie identifies board positions up to the 8 geometrical symmetries of the $3 \times 3$ grid---the dihedral group $D_4$ comprising 4 rotations and 4 reflections. Two boards that are rotations or reflections of each other count as one position.
+
+\subsection{Enumeration of Opening Player Choice-Points}
+
+MENACE plays as the opening player (X) and requires a matchbox only when facing a genuine decision (at least two legal moves). Enumerating the legal game tree (stopping at wins), reducing by symmetry, and considering only X-to-move positions yields:
+
+\begin{table}[h]
+	\centering
+	\begin{tabular}{lrr}
+		\toprule
+		Decision Point  & Ply & Positions    \\
+		\midrule
+		Before 1st move & 0   & 1            \\
+		Before 3rd move & 2   & 12           \\
+		Before 5th move & 4   & 108          \\
+		Before 7th move & 6   & 183          \\
+		\midrule
+		\textbf{Total}  &     & \textbf{304} \\
+		\bottomrule
+	\end{tabular}
+	\caption{X-to-move decision states by ply, reduced by $D_4$ symmetry.}
+	\label{tab:state-counts-by-ply}
+\end{table}
+
+The breakdown $1 + 12 + 108 + 183 = 304$ is widely reproduced in the literature.
+
+\subsection{Exclusion of 9th Move Positions}
+
+With eight marks placed, only one empty square remains---no decision is required. These 34 symmetry-reduced positions (at ply 8) are not choice-points. Including them yields 338 total X-to-move states.
+
+\subsection{From 304 to 287: The Double-Threat Subtraction}
+
+Among the 183 ``before 7th-move'' positions, there are exactly 17 symmetry-classes where the opponent already has two distinct immediate winning threats (a fork) and the opener has no immediate winning move. In these states, all legal moves lose on the next turn.
+
+Subtracting these inevitable-loss classes:
+\begin{equation}
+	\underbrace{1 + 12 + 108 + 183}_{\text{all choice-points}} - \underbrace{17}_{\text{inevitable-loss}} = \boxed{287}
+\end{equation}
+
+\subsection{Summary of State Counts}
+
+\begin{table}[h]
+	\centering
+	\begin{tabular}{rl}
+		\toprule
+		Count & Description                                                      \\
+		\midrule
+		338   & All canonical X-to-move states (including forced final moves)    \\
+		304   & Decision points only (excluding forced single-move positions)    \\
+		287   & Michie's count (excluding forced moves and double-threat losses) \\
+		\bottomrule
+	\end{tabular}
+	\caption{Relationship between canonical state counts in the MENACE literature.}
+	\label{tab:state-count-summary}
+\end{table}
+
+\section{The 17 Double-Threat Classes}
+\label{sec:double-threat-classes}
+
+A \emph{double-threat} (or \emph{fork}) occurs when O has placed pieces such that two distinct winning lines each contain two O marks and one empty square. Since X can only block one threat per move, O wins on the following turn regardless of X's choice. These positions represent inevitable losses for the opening player.
+
+\subsection{Board Position Indexing}
+
+Throughout this section, board positions use row-major indexing from 0 to 8:
+
+\begin{center}
+	\begin{tabular}{|c|c|c|}
+		\hline
+		0 & 1 & 2 \\
+		\hline
+		3 & 4 & 5 \\
+		\hline
+		6 & 7 & 8 \\
+		\hline
+	\end{tabular}
+\end{center}
+
+\subsection{Enumeration of Double-Threat Positions}
+
+Table~\ref{tab:double-threat} enumerates all 17 symmetry-classes of double-threat positions. Each represents a canonical board state at ply~6 (three X marks, three O marks) where:
+\begin{enumerate}
+	\item X has no immediate winning move (no line with two X marks and one empty square), and
+	\item O has at least two distinct winning moves (at least two lines each containing two O marks and one empty square).
+\end{enumerate}
+
+\begin{table}[htbp]
+	\centering
+	\begin{tabular}{r@{\hspace{1.5em}}l@{\hspace{1.5em}}l}
+		\toprule
+		\# & Board Position                                                                                                                                 & O's Winning Squares              \\
+		\midrule
+		\rule{0pt}{3.5ex}%
+		1  & \begin{tabular}[c]{|c|c|c|}\hline O&X&O\\\hline X&O&X\\\hline \cellcolor{gray!25}&\cellcolor{gray!25}&\cellcolor{gray!25}\\\hline\end{tabular} & 6, 8 (diagonal \& anti-diagonal) \\[2.5ex]
+		2  & \begin{tabular}[c]{|c|c|c|}\hline X&X&O\\\hline X&\cellcolor{gray!25}&O\\\hline O&\cellcolor{gray!25}&\cellcolor{gray!25}\\\hline\end{tabular} & 4, 8 (column \& diagonal)        \\[2.5ex]
+		3  & \begin{tabular}[c]{|c|c|c|}\hline X&O&\cellcolor{gray!25}\\\hline X&O&X\\\hline O&\cellcolor{gray!25}&\cellcolor{gray!25}\\\hline\end{tabular} & 2, 7 (column \& row)             \\[2.5ex]
+		4  & \begin{tabular}[c]{|c|c|c|}\hline O&X&O\\\hline X&O&\cellcolor{gray!25}\\\hline \cellcolor{gray!25}&X&\cellcolor{gray!25}\\\hline\end{tabular} & 6, 8 (anti-diagonal \& diagonal) \\[2.5ex]
+		5  & \begin{tabular}[c]{|c|c|c|}\hline X&O&X\\\hline O&O&\cellcolor{gray!25}\\\hline X&\cellcolor{gray!25}&\cellcolor{gray!25}\\\hline\end{tabular} & 5, 7 (row \& column)             \\[2.5ex]
+		6  & \begin{tabular}[c]{|c|c|c|}\hline X&O&O\\\hline \cellcolor{gray!25}&O&X\\\hline \cellcolor{gray!25}&\cellcolor{gray!25}&X\\\hline\end{tabular} & 6, 7 (column \& anti-diagonal)   \\[2.5ex]
+		7  & \begin{tabular}[c]{|c|c|c|}\hline X&O&X\\\hline X&\cellcolor{gray!25}&\cellcolor{gray!25}\\\hline O&O&\cellcolor{gray!25}\\\hline\end{tabular} & 4, 8 (row \& diagonal)           \\[2.5ex]
+		8  & \begin{tabular}[c]{|c|c|c|}\hline X&O&\cellcolor{gray!25}\\\hline X&O&\cellcolor{gray!25}\\\hline O&\cellcolor{gray!25}&X\\\hline\end{tabular} & 2, 7 (column \& row)             \\[2.5ex]
+		9  & \begin{tabular}[c]{|c|c|c|}\hline X&X&O\\\hline \cellcolor{gray!25}&X&\cellcolor{gray!25}\\\hline \cellcolor{gray!25}&O&O\\\hline\end{tabular} & 5, 6 (row \& anti-diagonal)      \\[2.5ex]
+		\bottomrule
+	\end{tabular}
+	\caption{Double-threat positions 1--9. Shaded cells indicate empty squares; O's winning squares complete two-in-a-row threats.}
+	\label{tab:double-threat}
+\end{table}
+
+\begin{table}[htbp]
+	\centering
+	\begin{tabular}{r@{\hspace{1.5em}}l@{\hspace{1.5em}}l}
+		\toprule
+		\# & Board Position                                                                                                                                 & O's Winning Squares                 \\
+		\midrule
+		\rule{0pt}{3.5ex}%
+		10 & \begin{tabular}[c]{|c|c|c|}\hline X&X&O\\\hline \cellcolor{gray!25}&O&O\\\hline \cellcolor{gray!25}&X&\cellcolor{gray!25}\\\hline\end{tabular} & 3, 6, 8 (row, column \& anti-diag.) \\[2.5ex]
+		11 & \begin{tabular}[c]{|c|c|c|}\hline X&X&O\\\hline \cellcolor{gray!25}&O&\cellcolor{gray!25}\\\hline \cellcolor{gray!25}&X&O\\\hline\end{tabular} & 5, 6 (column \& anti-diagonal)      \\[2.5ex]
+		12 & \begin{tabular}[c]{|c|c|c|}\hline X&X&O\\\hline \cellcolor{gray!25}&\cellcolor{gray!25}&X\\\hline O&O&\cellcolor{gray!25}\\\hline\end{tabular} & 4, 8 (diagonal \& row)              \\[2.5ex]
+		13 & \begin{tabular}[c]{|c|c|c|}\hline O&X&\cellcolor{gray!25}\\\hline O&O&X\\\hline \cellcolor{gray!25}&X&\cellcolor{gray!25}\\\hline\end{tabular} & 6, 8 (column \& diagonal)           \\[2.5ex]
+		14 & \begin{tabular}[c]{|c|c|c|}\hline \cellcolor{gray!25}&X&\cellcolor{gray!25}\\\hline O&X&X\\\hline O&O&\cellcolor{gray!25}\\\hline\end{tabular} & 0, 8 (column \& row)                \\[2.5ex]
+		15 & \begin{tabular}[c]{|c|c|c|}\hline O&X&\cellcolor{gray!25}\\\hline \cellcolor{gray!25}&O&X\\\hline O&X&\cellcolor{gray!25}\\\hline\end{tabular} & 2, 3, 8 (column, row \& diagonal)   \\[2.5ex]
+		16 & \begin{tabular}[c]{|c|c|c|}\hline X&X&O\\\hline X&\cellcolor{gray!25}&\cellcolor{gray!25}\\\hline O&\cellcolor{gray!25}&O\\\hline\end{tabular} & 4, 5, 7 (diag., row \& column)      \\[2.5ex]
+		17 & \begin{tabular}[c]{|c|c|c|}\hline X&X&O\\\hline \cellcolor{gray!25}&\cellcolor{gray!25}&X\\\hline O&\cellcolor{gray!25}&O\\\hline\end{tabular} & 4, 7 (diagonal \& row)              \\[2.5ex]
+		\bottomrule
+	\end{tabular}
+	\caption{Double-threat positions 10--17. Positions 10, 15, and 16 exhibit \emph{triple} threats.}
+	\label{tab:double-threat-cont}
+\end{table}
+
+\subsection{Observations}
+
+Several patterns emerge from the enumeration:
+
+\begin{itemize}
+	\item \textbf{Triple threats}: Positions 10, 15, and 16 have three winning squares for O rather than two. These arise when O's pieces simultaneously threaten along three distinct lines.
+
+	\item \textbf{Fork structures}: Most double-threats involve O occupying the center (position~4) or a corner, creating intersecting threats along rows, columns, and diagonals.
+
+	\item \textbf{Symmetry classes}: Each position shown is one canonical representative. Applying the eight $D_4$ transformations (rotations and reflections) generates between 1 and 8 equivalent raw board states per class, depending on the position's inherent symmetry.
+
+	\item \textbf{Pedagogical significance}: These 17 positions represent the ``traps'' that a novice player must learn to avoid. Optimal play by X prevents O from ever reaching any of these configurations.
+\end{itemize}
+
+\section{Variant Counts in the Literature}
+
+Different sources report different counts:
+
+\begin{itemize}
+	\item \textbf{304}: Most modern reconstructions include all genuine decision points, hence $1 + 12 + 108 + 183 = 304$ matchboxes. This is the standard build count in tutorials.
+	\item \textbf{287}: Michie's 1963 paper excludes the 17 ``no-escape'' cases as not worth separate boxes.
+	\item \textbf{288}: In later writings Michie sometimes mentioned 288; the literature is not fully consistent on fringe cases.
+\end{itemize}
+
+The implementation in this thesis supports all three filters via the \texttt{StateFilter} enum: \texttt{All} (338), \texttt{DecisionOnly} (304), and \texttt{Michie} (287).
