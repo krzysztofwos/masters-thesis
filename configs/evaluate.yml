@@ -1,0 +1,138 @@
+project_name: "Pure_AIF_Evaluation"
+output_data_dir: "./menace_data"
+menace_binary: "./target/release/menace"
+default_games: 100
+default_opponent: "optimal"
+experiments:
+  - name: "Pure_AIF_Beta_Sweep_Eval"
+    base_args:
+      agent_path: "menace_data/Pure_AIF_Beta_Sweep"
+      opponent: "optimal"
+      games: 100
+      first_player: "x"
+    include_conditions: true
+    exclude_conditions: []
+  - name: "Oracle_AIF_Eval"
+    mode: "train_eval"
+    seeds: 10
+    base_args:
+      validation_games: 100
+      first_player: "x"
+      opponent: "optimal"
+      train_args:
+        regimen: "optimal"
+        games: 500
+        filter: "michie"
+        ai_ambiguity: 0.1
+        policy_lambda: 0.25
+        policy_beads_scale: 40
+    conditions:
+      - label: "oracle-active-inference-ai_beta_0.5"
+        learner: "oracle-active-inference"
+        train_args:
+          ai_beta: 0.5
+          ai_opponent: "uniform"
+  - name: "TD_Learners_Eval"
+    mode: "train_eval"
+    seeds: [0, 1, 2, 3, 4]
+    base_args:
+      validation_games: 500
+      first_player: "x"
+      train_args:
+        filter: "michie"
+        ql_learning_rate: 0.5
+        ql_discount: 0.99
+        ql_epsilon: 0.5
+        ql_epsilon_decay: 0.999
+        ql_min_epsilon: 0.05
+        ql_q_init: 0.0
+    conditions:
+      - label: "q-learning-vs-random"
+        learner: "q-learning"
+        opponent: "random"
+        train_args:
+          opponent: "random"
+          regimen: "random"
+          games: 5000
+      - label: "q-learning-vs-defensive"
+        learner: "q-learning"
+        opponent: "defensive"
+        train_args:
+          opponent: "defensive"
+          regimen: "defensive"
+          games: 5000
+      - label: "sarsa-vs-random"
+        learner: "sarsa"
+        opponent: "random"
+        train_args:
+          opponent: "random"
+          regimen: "random"
+          games: 5000
+      - label: "sarsa-vs-defensive"
+        learner: "sarsa"
+        opponent: "defensive"
+        train_args:
+          opponent: "defensive"
+          regimen: "defensive"
+          games: 5000
+  - name: "Pure_AIF_Beta_Fine_Eval"
+    base_args:
+      agent_path: "menace_data/Pure_AIF_Beta_Fine"
+      opponent: "optimal"
+      games: 100
+      first_player: "x"
+    include_conditions: true
+    exclude_conditions: []
+  - name: "AIF_Variants_Showdown_Eval"
+    base_args:
+      agent_path: "menace_data/AIF_Variants_Showdown"
+      opponent: "optimal"
+      games: 100
+      first_player: "x"
+    include_conditions: true
+    exclude_conditions:
+      - "oracle-active-inference-ai_beta_0.5"
+  - name: "Pure_AIF_vs_MENACE_Eval"
+    base_args:
+      agent_path: "menace_data/Pure_AIF_vs_MENACE_Optimal"
+      opponent: "optimal"
+      games: 100
+      first_player: "x"
+    include_conditions: true
+    exclude_conditions: []
+
+  - name: "AIF_Variants_Showdown_Oracle_Eval"
+    mode: "train_eval"
+    seeds: 10
+    base_args:
+      validation_games: 100
+      first_player: "x"
+      train_args:
+        regimen: "optimal"
+        games: 500
+        filter: "michie"
+        ai_beta: 0.5
+        ai_opponent: "uniform"
+        ai_ambiguity: 0.1
+        policy_lambda: 0.25
+        policy_beads_scale: 40
+        prefs: "probs:0.6,0.35,0.05"
+    conditions:
+      - label: "oracle-active-inference-ai_beta_0.5"
+        learner: "oracle-active-inference"
+  - name: "QL_vs_Defensive_Eval"
+    base_args:
+      agent_path: "menace_data/QL_vs_Defensive"
+      opponent: "optimal"
+      games: 100
+      first_player: "x"
+    include_conditions: true
+    exclude_conditions: []
+  - name: "SARSA_vs_Defensive_Eval"
+    base_args:
+      agent_path: "menace_data/SARSA_vs_Defensive"
+      opponent: "optimal"
+      games: 100
+      first_player: "x"
+    include_conditions: true
+    exclude_conditions: []

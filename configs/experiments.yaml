@@ -1,0 +1,85 @@
+# Global settings for this experiment file
+project_name: "MENACE_vs_AIF_Comparison"
+output_data_dir: "./menace_data"
+menace_binary: "./target/release/menace"
+default_seeds: 10
+evaluation_configs:
+  - "./configs/evaluate.yml"
+
+# Define experiments to run
+experiments:
+  - name: "Restock_Strategy_Comparison"
+    agent: "menace"
+    # Base arguments for all runs in this experiment
+    base_args:
+      filter: "michie"
+      regimen: "mixed"
+      games: 500
+      validation_games: 50
+    # Create a run for each combination of these parameters
+    sweep:
+      restock: ["move", "box"]
+
+  - name: "AIF_Exploration_Study"
+    agent: "active-inference"
+    base_args:
+      regimen: "mixed"
+      games: 500
+      validation_games: 50
+    sweep:
+      ai_beta: [0.0, 0.5, 1.0, 2.0]
+      ai_opponent: ["uniform", "adversarial"]
+
+  - name: "AIF_EFE_Export"
+    type: "export"
+    base_args:
+      command: "analyze"
+      analyzer: "active-inference"
+    sweep:
+      beta: [0.0, 0.5, 1.0, 2.0]
+      opponent: ["uniform", "adversarial"]
+
+  - name: "Historical_Fidelity"
+    agent: "menace"
+    base_args:
+      regimen: "optimal"
+      games: 200
+      validation_games: 50
+      ai_opponent: "minimax"
+      ai_beta: 0.0
+      policy_lambda: 1.0
+    sweep:
+      filter: ["all", "decision-only", "michie"]
+
+  - name: "Curriculum_Comparison"
+    agent: "menace"
+    base_args:
+      filter: "michie"
+      games: 500
+      validation_games: 50
+    sweep:
+      regimen: ["optimal", "random", "defensive", "mixed"]
+
+  - name: "Filter_Effect"
+    agent: "menace"
+    base_args:
+      regimen: "mixed"
+      games: 500
+      validation_games: 50
+    sweep:
+      filter: ["michie", "decision-only"]
+
+  - name: "MENACE_vs_AIF"
+    base_args:
+      regimen: "mixed"
+      games: 500
+      validation_games: 50
+    sub_experiments:
+      - agent: "menace"
+        sweep:
+          restock: ["box"]
+      - agent: "active-inference"
+        base_args:
+        sweep:
+          ai_beta: [0.5]
+          ai_opponent: ["uniform"]

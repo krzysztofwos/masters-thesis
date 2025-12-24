@@ -1,0 +1,108 @@
+project_name: "Thesis_Evaluation"
+output_data_dir: "./menace_data"
+menace_binary: "./target/release/menace"
+default_games: 100
+default_opponent: "optimal"
+experiments:
+  - name: "Pure_AIF_Beta_Sweep_Eval"
+    base_args:
+      agent_path: "menace_data/Pure_AIF_Beta_Sweep"
+      opponent: "optimal"
+      games: 100
+      first_player: "x"
+    include_conditions: true
+    exclude_conditions: []
+  - name: "AIF_Variants_Showdown_Eval"
+    base_args:
+      agent_path: "menace_data/AIF_Variants_Showdown"
+      opponent: "optimal"
+      games: 100
+      first_player: "x"
+    include_conditions: true
+    exclude_conditions:
+      - "oracle-active-inference-ai_beta_0.5"
+  - name: "Oracle_AIF_Eval"
+    mode: "train_eval"
+    seeds: 10
+    base_args:
+      validation_games: 100
+      first_player: "x"
+      opponent: "optimal"
+      train_args:
+        regimen: "optimal"
+        games: 500
+        filter: "michie"
+        ai_opponent: "uniform"
+        ai_ambiguity: 0.0
+        policy_lambda: 0.25
+    conditions:
+      - label: "oracle-active-inference-ai_beta_0.5"
+        learner: "oracle-active-inference"
+        train_args:
+          ai_beta: 0.5
+  - name: "Pure_AIF_vs_MENACE_Eval"
+    base_args:
+      agent_path: "menace_data/Pure_AIF_vs_MENACE_Optimal"
+      opponent: "optimal"
+      games: 100
+      first_player: "x"
+    include_conditions: true
+    exclude_conditions: []
+  - name: "QL_SARSA_Baselines_Eval"
+    mode: "train_eval"
+    seeds: 10
+    base_args:
+      validation_games: 100
+      first_player: "x"
+      train_args:
+        filter: "michie"
+        ql_learning_rate: 0.5
+        ql_discount: 0.99
+        ql_epsilon: 0.5
+        ql_min_epsilon: 0.01
+        ql_epsilon_decay: 0.995
+    conditions:
+      - label: "q-learning-opponent_random"
+        learner: "q-learning"
+        opponent: "random"
+        train_args:
+          regimen: "random"
+          opponent: "random"
+          games: 5000
+      - label: "q-learning-opponent_defensive"
+        learner: "q-learning"
+        opponent: "defensive"
+        train_args:
+          regimen: "defensive"
+          opponent: "defensive"
+          games: 5000
+      - label: "sarsa-opponent_random"
+        learner: "sarsa"
+        opponent: "random"
+        train_args:
+          regimen: "random"
+          opponent: "random"
+          games: 5000
+      - label: "sarsa-opponent_defensive"
+        learner: "sarsa"
+        opponent: "defensive"
+        train_args:
+          regimen: "defensive"
+          opponent: "defensive"
+          games: 5000
+  - name: "Filter_Effect_Eval"
+    base_args:
+      agent_path: "menace_data/Filter_Effect"
+      opponent: "optimal"
+      games: 100
+      first_player: "x"
+    include_conditions: true
+    exclude_conditions: []
+  - name: "Restock_Strategy_Comparison_Eval"
+    base_args:
+      agent_path: "menace_data/Restock_Strategy_Comparison"
+      opponent: "optimal"
+      games: 100
+      first_player: "x"
+    include_conditions: true
+    exclude_conditions: []
