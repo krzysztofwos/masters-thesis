@@ -1,0 +1,186 @@
+# Thesis Experiments Configuration
+# This file defines the experiment suite used to generate the results reported in the thesis.
+# Run with: python -m scripts.automation.experiment_driver run --config-file configs/thesis_experiments.yaml
+
+project_name: "Thesis_Experiments"
+output_data_dir: "./menace_data"
+menace_binary: "./target/release/menace"
+default_seeds: 10
+evaluation_configs:
+  - ./configs/evaluate_thesis.yml
+
+experiments:
+  # ============================================================================
+  # Core MENACE vs Active Inference Comparison
+  # ============================================================================
+  # These experiments generate data for Figure: fig-menace-vs-aif.png
+
+  - name: "Pure_AIF_vs_MENACE_Optimal"
+    base_args:
+      games: 500
+      validation_games: 100
+      filter: "michie"
+    sub_experiments:
+      # MENACE with box restocking (main configuration)
+      - agent: "menace"
+        base_args:
+          regimen: "mixed" # Curriculum: random → defensive → optimal
+        sweep:
+          restock: ["box"]
+
+      # Instrumental Active Inference (λ = 0)
+      - agent: "active-inference"
+        base_args:
+          regimen: "optimal"
+          ai_opponent: "uniform"
+          ai_ambiguity: 0.0
+          policy_lambda: 0.25
+        sweep:
+          ai_beta: [0.0] # λ = 0 for instrumental
+
+  # ============================================================================
+  # Active Inference Variants Comparison
+  # ============================================================================
+  # Head-to-head comparison of different AIF variants
+
+  - name: "AIF_Variants_Showdown"
+    base_args:
+      regimen: "optimal"
+      games: 500
+      validation_games: 100
+      filter: "michie"
+      ai_opponent: "uniform"
+      ai_ambiguity: 0.0
+      policy_lambda: 0.25
+    sub_experiments:
+      # Hybrid Active Inference (RL policy + opponent beliefs)
+      - agent: "active-inference"
+        sweep:
+          ai_beta: [0.5]
+
+      # Pure Active Inference (fully Bayesian)
+      - agent: "pure-active-inference"
+        sweep:
+          ai_beta: [0.5]
+
+      # Oracle Active Inference (perfect opponent model)
+      - agent: "oracle-active-inference"
+        sweep:
+          ai_beta: [0.5]
+
+  # ============================================================================
+  # Pure Active Inference Beta Sweep
+  # ============================================================================
+  # These experiments generate data for Figure: fig-beta-sweep.png
+
+  - name: "Pure_AIF_Beta_Sweep"
+    agent: "pure-active-inference"
+    base_args:
+      regimen: "optimal"
+      games: 500
+      validation_games: 100
+      filter: "michie"
+      ai_opponent: "uniform"
+      ai_ambiguity: 0.0
+      policy_lambda: 0.25
+    sweep:
+      ai_beta: [0.0, 0.25, 0.5] # λ values for epistemic weight
+
+  # ============================================================================
+  # EFE Component Export
+  # ============================================================================
+  # Export detailed EFE decomposition for epistemic value analysis
+
+  - name: "AIF_EFE_Export"
+    type: "export"
+    base_args:
+      command: "analyze"
+      analyzer: "active-inference"
+    sweep:
+      beta: [0.0, 0.5]
+      opponent: ["uniform"]
+
+  # ============================================================================
+  # Reinforcement Learning Baselines
+  # ============================================================================
+  # Q-Learning and SARSA for comparison
+
+  - name: "QL_SARSA_Baselines"
+    base_args:
+      games: 5000 # RL methods need more games
+      validation_games: 100
+      filter: "michie"
+    sub_experiments:
+      # Q-Learning vs Random
+      - agent: "q-learning"
+        base_args:
+          regimen: "random"
+          ql_learning_rate: 0.5
+          ql_discount: 0.99
+          ql_epsilon: 0.5
+          ql_min_epsilon: 0.01
+          ql_epsilon_decay: 0.995
+        sweep:
+          opponent: ["random"]
+
+      # Q-Learning vs Defensive
+      - agent: "q-learning"
+        base_args:
+          regimen: "defensive"
+          ql_learning_rate: 0.5
+          ql_discount: 0.99
+          ql_epsilon: 0.5
+          ql_min_epsilon: 0.01
+          ql_epsilon_decay: 0.995
+        sweep:
+          opponent: ["defensive"]
+
+      # SARSA vs Random
+      - agent: "sarsa"
+        base_args:
+          regimen: "random"
+          ql_learning_rate: 0.5
+          ql_discount: 0.99
+          ql_epsilon: 0.5
+          ql_min_epsilon: 0.01
+          ql_epsilon_decay: 0.995
+        sweep:
+          opponent: ["random"]
+
+      # SARSA vs Defensive
+      - agent: "sarsa"
+        base_args:
+          regimen: "defensive"
+          ql_learning_rate: 0.5
+          ql_discount: 0.99
+          ql_epsilon: 0.5
+          ql_min_epsilon: 0.01
+          ql_epsilon_decay: 0.995
+        sweep:
+          opponent: ["defensive"]
+
+  # ============================================================================
+  # Design Ablation Studies
+  # ============================================================================
+
+  # State Filter Comparison
+  - name: "Filter_Effect"
+    agent: "menace"
+    base_args:
+      regimen: "mixed"
+      games: 500
+      validation_games: 100
+      restock: "box"
+    sweep:
+      filter: ["michie", "decision-only"]
+
+  # Restock Strategy Comparison
+  - name: "Restock_Strategy_Comparison"
+    agent: "menace"
+    base_args:
+      filter: "michie"
+      regimen: "mixed"
+      games: 500
+      validation_games: 100
+    sweep:
+      restock: ["none", "move", "box"]
