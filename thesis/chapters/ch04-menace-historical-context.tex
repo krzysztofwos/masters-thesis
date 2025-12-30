@@ -5,6 +5,12 @@ This chapter situates MENACE historically, explains the mechanical design choice
 
 To understand MENACE's significance, we first situate it in the historical context in which it emerged and outline the constraints of its mechanical design. Donald Michie constructed MENACE in 1961, at a time when artificial intelligence was still finding its identity as a field and when the very possibility of machine learning was viewed with scepticism. His matchbox computer provided an early counterexample to the prevailing belief that a program could never outperform its programmer.
 
+\section*{Donald Michie (1923--2007)}
+
+Donald Michie was a key figure in early British artificial intelligence. During World War II he worked at Bletchley Park on high-level cipher problems. He later described how those years shaped his long-running interest in programming learning and intelligence into machines~\cite{michie_ieee_pioneers}. In the early 1960s---before routine access to computing---he developed MENACE, a physical reinforcement-learning system for noughts and crosses built from matchboxes and coloured beads~\cite{muggleton_2007_michie_obituary}. The point of MENACE was not ``performance'' in the modern benchmark sense, but the ability to make modelling assumptions and learning dynamics explicit and inspectable. Michie went on to build and lead Edinburgh's machine intelligence efforts and to edit the influential \emph{Machine Intelligence} volumes that recorded a formative period of AI research~\cite{michie_aiai_home}.
+
+This thesis continues in that tradition, using MENACE's transparency to compare classical reinforcement learning with Active Inference in a fully enumerable domain.
+
 \section{The Original Challenge}
 
 Michie's motivation was both theoretical and practical. In his paper ``Trial and Error''~\cite{michie1963experiments}, he explicitly distinguished between two aspects of learning: ``classification of the stimulus'' and ``reinforcement of the response.'' He acknowledged that classification was ``quite extraordinarily complicated'' but argued that reinforcement ``is much more tractable'' once the discrete situations could be enumerated. This insight led to a crucial architectural decision: rather than attempting to solve the general problem of pattern recognition and learning together, MENACE would focus exclusively on reinforcement learning within a fully enumerated state space.
