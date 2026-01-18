@@ -1,0 +1,232 @@
+/*-- scss:defaults --*/
+
+@import url(https://fonts.googleapis.com/css?family=Source+Code+Pro:400,700,400italic,700italic);
+@import url(https://fonts.googleapis.com/css?family=Source+Sans+Pro:400,700,400italic,700italic);
+
+$font-family-sans-serif: "Source Sans Pro", sans-serif !default;
+$font-family-monospace: "Source Code Pro", monospace !default;
+
+$white: #ffffff;
+$black: #000000;
+$blue-400: #60a5fa;
+$blue-700: #1d4ed8;
+$gray-200: #e5e7eb;
+$gray-300: #d1d5db;
+$gray-400: #9ca3af;
+$gray-500: #6b7280;
+$gray-600: #4b5563;
+
+/*
+$body-bg: $dddfe5 !default;
+$body-color: $black !default;
+*/
+
+$body-bg: $black !default;
+$body-color: $gray-400 !default;
+$link-color: $blue-400 !default;
+
+$presentation-heading-font-weight: 700 !default;
+$presentation-heading-color: #fafafc !default;
+
+$presentation-h1-font-size: 2em; /* Reduced from 2.5em */
+$presentation-h2-font-size: 1.4em; /* Reduced from 1.6em */
+$presentation-h3-font-size: 1.1em; /* Reduced from 1.3em */
+$presentation-h4-font-size: 0.9em; /* Reduced from 1em */
+
+/*-- scss:rules --*/
+
+.date {
+  color: $gray-400;
+  font-weight: 400;
+}
+
+.math {
+  color: white;
+  font-weight: 400;
+}
+
+.subtitle,
+.quarto-title-subtitle {
+  color: $white;
+  font-weight: 400;
+}
+
+.quarto-title-affiliation {
+  color: $gray-400;
+  font-weight: 400;
+}
+
+.quarto-title-author-name {
+  color: $gray-400;
+  font-weight: 400;
+}
+
+.highlight {
+  color: $white;
+  font-weight: 400;
+  font-style: normal;
+}
+
+.reveal .slide-number {
+  font-size: 0.5em !important;
+}
+
+.reveal .slides > section h1,
+.reveal .slides > section h2 {
+  color: $blue-400; /* Fallback color for browsers that don't support gradients */
+  color: transparent;
+  background-image: linear-gradient(to right, $blue-700, $blue-400);
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+
+.reveal .slides > section h1 {
+  display: block;
+  text-align: center;
+}
+
+.reveal .slides > section h2 {
+  display: inline-block;
+  margin-bottom: 0.5em;
+  font-weight: 700;
+}
+
+.no-bullets ul {
+  list-style-type: none;
+  padding-left: 0;
+  margin-left: 0;
+}
+
+.gradient {
+  color: transparent; /* Fallback color can be added before this line */
+  background-image: linear-gradient(to right, $blue-700, $blue-400);
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+
+/* Ensure slides don't overflow by default */
+.reveal .slides section {
+  box-sizing: border-box;
+}
+
+/* Tables in slides */
+.reveal table {
+  font-size: 0.85em;
+}
+
+.reveal table th {
+  color: $white;
+  font-weight: 400;
+}
+
+.reveal table th,
+.reveal table td {
+  padding: 0.3em 0.6em;
+}
+
+/* Math in table cells should match table text color */
+.reveal table td .math,
+.reveal table td mjx-container {
+  color: $gray-400 !important;
+}
+
+/* Override for white math in specific tables */
+.white-math table td .math,
+.white-math table td mjx-container {
+  color: $white !important;
+}
+
+/* Tighter list spacing for dense slides */
+.reveal ul,
+.reveal ol {
+  margin-bottom: 0.3em;
+  margin-left: 0;
+  padding-left: 1.5em; /* Space for number/bullet */
+}
+
+.reveal li {
+  margin-bottom: 0.2em;
+}
+
+/* Add space above paragraphs that introduce lists */
+.reveal .slides p:has(+ ul),
+.reveal .slides p:has(+ ol) {
+  margin-top: 0.8em;
+}
+
+/* Tighten spacing between paragraphs and lists */
+.reveal .slides p + ul,
+.reveal .slides p + ol {
+  margin-top: -0.3em;
+}
+
+/* Blockquotes */
+.reveal blockquote {
+  font-size: 0.9em;
+  padding: 0.5em 1em 0.5em 2em;
+  margin: 0.5em 0;
+  border-left: none;
+  background: none;
+  color: $gray-400;
+}
+
+.reveal blockquote p {
+  color: inherit;
+}
+
+/* Columns */
+.reveal .columns {
+  display: flex;
+  gap: 1.5em;
+  align-items: flex-start;
+}
+
+.reveal .column {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+/* Respect explicit width on columns */
+.reveal .column[style*="width:"] {
+  flex: 0 1 auto;
+}
+/* Slide that has been auto-fitted - visual indicator for debugging */
+.reveal section[data-fitted="true"] {
+  /* Optional: add subtle indicator */
+}
+
+/* Ensure math doesn't cause overflow */
+.reveal mjx-container {
+  overflow: visible;
+  max-width: 100%;
+}
+
+.reveal mjx-container[display="true"] {
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.reveal .slides > section h3,
+.reveal .slides > section h4,
+.reveal .slides > section h5,
+.reveal .slides > section h6 {
+  font-weight: 700;
+}
+
+/* Legend/definitions box for variable definitions */
+.legend {
+  position: absolute;
+  bottom: 0.5em;
+  left: 0;
+  right: 0;
+  font-size: 0.55em;
+  color: $gray-500;
+  border-top: 1px solid $gray-600;
+  padding-top: 0.4em;
+  margin-top: 1em;
+}
+
+.legend p {
+  margin: 0;
+  line-height: 1.4;
+}

@@ -1,0 +1,147 @@
+---
+title: "MENACE as a Bayesian Observer"
+subtitle: "A Technical Analysis through the Free Energy Principle"
+author: "Krzysztof Woś"
+institute: "Nakayama Laboratory"
+date: 2026-01-23
+format:
+  revealjs:
+    center: false
+    incremental: false
+    menu: false
+    mouse-wheel: true
+    progress: false
+    mathjaxurl: https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js
+    slide-number: true
+    smaller: false
+    theme: theme.scss
+    toc: false
+    include-after-body:
+      - text: |
+          <script src="fit-text.js"></script>
+          <script src="fit-body.js"></script>
+          <script>
+          // Inject notes into the title slide
+          document.addEventListener('DOMContentLoaded', function() {
+            const titleSlide = document.getElementById('title-slide');
+            if (titleSlide) {
+              const notes = document.createElement('aside');
+              notes.className = 'notes';
+              notes.innerHTML = `
+                Thank you for the opportunity to present my work. My thesis addresses a question Donald Michie posed in 1966: how should a learning agent price information against immediate performance? I'll present a formal answer and show that MENACE — his physical learning machine — implements a special case.
+              `;
+              titleSlide.appendChild(notes);
+            }
+          });
+          </script>
+---
+
+## Michie's Question (1966)
+
+:::: {.columns}
+
+::: {.column style="width: 70%;"}
+
+> "In simple games for which individual storage of all past board positions is feasible, is any optimal learning algorithm known? ... The difficulty lies in _costing the acquisition of information for future use at the expense of present expected gain_."
+>
+> — Donald Michie, "Game-Playing and Game-Learning Automata" (1966)
+
+:::
+
+::: {.column style="width: 30%; text-align: center;"}
+
+![Donald Michie](assets/Donald-Michie-2003.jpg)
+
+:::
+
+::::
+
+<span class="highlight">Expected free energy provides a Bayes-optimal formalization of the trade-off Michie identified.</span>
+
+::: {.notes}
+Donald Michie was a British AI pioneer who worked alongside Alan Turing at Bletchley Park.
+
+In 1961, he built MENACE — a physical machine that learned to play Tic-Tac-Toe using matchboxes and colored beads.
+
+By 1966, he was asking a deeper question: given that we can store all board positions, what is the optimal way to learn?
+
+The difficulty, as he put it, lies in pricing information — how much immediate performance should an agent sacrifice to gather knowledge that might be useful later? This is the exploration-exploitation trade-off stated in its original form.
+
+My thesis argues that expected free energy — an objective function from Bayesian inference — provides the formal answer Michie sought.
+
+I will show how MENACE implements a special case of this objective and present empirical evidence supporting this correspondence.
+:::
+
+## Thesis Contributions
+
+1. A mapping from MENACE to Active Inference in Dirichlet-categorical terms
+2. Identification of MENACE as an instrumental Active Inference agent
+3. Empirical comparison with Active Inference variants and Reinforcement Learning (RL) baselines
+4. A generative model in which $\lambda$ parameterizes the cost of information acquisition
+
+::: {.notes}
+My thesis makes four contributions.
+
+First, a precise mapping from MENACE's mechanics to Active Inference using Dirichlet-categorical distributions.
+
+Second, the identification that MENACE approximately corresponds to the purely instrumental special case of expected free energy — an agent that exploits without explicit information-seeking.
+
+Third, empirical validation comparing MENACE against Active Inference variants and Reinforcement Learning baselines.
+
+Fourth, a generative model within the Active Inference framework that explicitly parameterizes the cost of information acquisition which directly answers Michie's question by providing a formal mechanism to price information in the same units as outcomes.
+
+I will now present the background on MENACE before developing this correspondence.
+:::
+
+# Part I: Background
+
+{{< include slides/01-menace-machine.qmd >}}
+
+# Part II: The Correspondence
+
+{{< include slides/02-bayesian-connection.qmd >}}
+
+{{< include slides/03-free-energy-principle.qmd >}}
+
+{{< include slides/04-menace-as-fep.qmd >}}
+
+# Part III: Empirical Analysis
+
+{{< include slides/05-empirical-results.qmd >}}
+
+{{< include slides/06-answering-michies-question.qmd >}}
+
+## Conclusions
+
+<span class="highlight">Key Findings</span>
+
+- Dirichlet-categorical mapping formalizes MENACE's Bayesian structure
+- MENACE ≈ instrumental Active Inference ($\lambda = 0$) confirmed empirically
+- $\lambda$ quantifies information cost with measurable short-horizon effects
+- Dirichlet representation provides robustness that tabular RL lacks
+
+<span class="highlight">MENACE is a historically remarkable, mechanizable special case of Active Inference.</span>
+
+::: {.notes}
+To summarize the key findings.
+
+First, the theoretical contribution: the Dirichlet-categorical mapping formalizes MENACE's implicit Bayesian structure.
+
+Second, instrumental equivalence: MENACE and an Active Inference agent with epistemic drive suppressed achieve comparable performance, supporting the identification of MENACE as the purely instrumental special case.
+
+Third, the cost of information: explicit epistemic value (positive $\lambda$) reduces short-horizon performance, exactly as Michie predicted. The $\lambda$ parameter makes this trade-off an explicit design choice.
+
+Fourth, robustness: the Dirichlet representation provides natural protection against distributional shift that tabular RL lacks, because restocking keeps all actions at positive probability.
+
+The takeaway is that MENACE — a sixty-year-old physical learning machine — instantiates principles that remain central to modern Bayesian approaches to learning and decision-making.
+:::
+
+# Thank you for your attention
+
+Code, data, and thesis: [github.com/krzysztofwos/masters-thesis](https://github.com/krzysztofwos/masters-thesis)
+
+# Appendix
+
+{{< include slides/appendix-01-donald-michie.qmd >}}
+
+{{< include slides/appendix-02-mathematical-details.qmd >}}

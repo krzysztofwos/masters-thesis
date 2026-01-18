@@ -1,0 +1,45 @@
+## Answering Michie's Question
+
+> "The difficulty lies in _costing the acquisition of information_ for future use at the expense of present expected gain."
+
+$$G_\lambda(\pi) = \text{Risk}(\pi) - \lambda \cdot I(o;\theta)$$
+
+The scalar $\lambda \geq 0$ is the exchange rate Michie asked for — not a single algorithm, but a family:
+
+:::: {.columns}
+
+::: {.column width="50%"}
+
+<span class="highlight">Active Inference (General)</span>
+
+- Epistemic value priced via $\lambda$
+- Trade-off is a design parameter
+
+:::
+
+::: {.column width="50%"}
+
+<span class="highlight">MENACE (Special Case)</span>
+
+- Instrumental objective ($\lambda = 0$)
+- Exploration emerges from uncertainty
+
+:::
+
+::::
+
+<span class="highlight">Thesis contribution:</span> This framework answers Michie's question with MENACE as a concrete, mechanizable special case.
+
+::: {.legend}
+$G_\lambda(\pi)$: expected free energy &nbsp;&nbsp;•&nbsp;&nbsp; $\lambda$: exchange rate &nbsp;&nbsp;•&nbsp;&nbsp; $I(o;\theta)$: information gain &nbsp;&nbsp;•&nbsp;&nbsp; $\text{Risk}$: instrumental cost
+:::
+
+::: {.notes}
+Finally, we return to Michie's original question: how to price information against immediate performance?
+
+The $\lambda$ parameter is the exchange rate. When $\lambda = 0$, information has no explicit value — the agent is purely instrumental. When $\lambda$ is positive, the agent sacrifices immediate performance to reduce uncertainty.
+
+The answer is not a single optimal algorithm but a family of objectives. MENACE implements $\lambda = 0$ with implicit exploration from probability matching. Active Inference provides the general framework where the trade-off becomes an explicit design choice.
+
+My thesis places MENACE within this modern framework as a mechanically interpretable special case.
+:::

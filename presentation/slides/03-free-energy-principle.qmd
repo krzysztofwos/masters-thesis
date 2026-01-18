@@ -1,0 +1,65 @@
+## The Free Energy Principle and Active Inference
+
+<span class="highlight">Core idea:</span> Adaptive systems minimize surprise — but surprise is intractable.
+
+$$\text{Surprise} = -\ln p(o) \quad \text{(requires marginalizing over hidden states)}$$
+
+<span class="highlight">Solution:</span> Minimize free energy $F$, a computable upper bound on surprise.
+
+$$F = \underbrace{D_{KL}[q(s|o) \| p(s|o)]}_{\geq 0} + \underbrace{(-\ln p(o))}_{\text{surprise}} \geq \text{surprise}$$
+
+Active Inference operationalizes the FEP: update beliefs to match observations, or act to make observations match beliefs.
+
+::: {.legend}
+$F$: free energy &nbsp;&nbsp;•&nbsp;&nbsp; $D_{KL}$: KL divergence &nbsp;&nbsp;•&nbsp;&nbsp; $q(s|o)$: approximate posterior &nbsp;&nbsp;•&nbsp;&nbsp; $p(s|o)$: true posterior &nbsp;&nbsp;•&nbsp;&nbsp; $p(o)$: evidence
+:::
+
+::: {.notes}
+The Free Energy Principle proposes that adaptive systems — biological or artificial — can be understood as minimizing surprise about their observations. Surprise is defined as negative log probability: $-\ln p(o)$.
+
+But there is a computational problem: computing surprise directly requires marginalizing over all hidden states, which is intractable. This is why we use free energy instead.
+
+Free energy equals KL divergence plus surprise. Since KL divergence is non-negative, free energy is always an upper bound on surprise. Minimizing free energy does two things: it makes the approximate posterior closer to the true posterior, and it tightens the bound on surprise.
+
+Active Inference operationalizes the Free Energy Principle. It provides a unified framework for both perception and action: agents can minimize surprise by updating their beliefs to better predict observations (perception), or by acting to generate observations they expect (action).
+
+MENACE learns policies — it changes its action selection — to make winning unsurprising. This is the key connection to Active Inference that we will develop.
+:::
+
+## Expected Free Energy with λ Parameter
+
+The epistemic weight $\lambda$ prices information in outcome units:
+
+$$G_\lambda(\pi) = \underbrace{\text{Risk}(\pi)}_{\text{instrumental cost}} - \lambda \underbrace{I(o;\theta)}_{\text{epistemic value}}$$
+
+- Risk: $D_{KL}(q(o|\pi) \| p(o|C))$ — distance from preferred outcomes
+- Epistemic Value: $I(o;\theta)$ — expected information gain about parameters
+
+$\lambda$ is Michie's "exchange rate" between information and immediate gain.
+
+<span class="highlight">Decision objective:</span> Expected free energy makes the utility + information trade-off explicit.
+
+::: {.legend}
+$G_\lambda(\pi)$: expected free energy &nbsp;&nbsp;•&nbsp;&nbsp; $\pi$: policy &nbsp;&nbsp;•&nbsp;&nbsp; $\lambda$: epistemic weight &nbsp;&nbsp;•&nbsp;&nbsp; $o$: outcome &nbsp;&nbsp;•&nbsp;&nbsp; $\theta$: model parameters &nbsp;&nbsp;•&nbsp;&nbsp; $I(o;\theta)$: information gain about $\theta$ from observing $o$ &nbsp;&nbsp;•&nbsp;&nbsp; $q(o|\pi)$: predicted outcomes &nbsp;&nbsp;•&nbsp;&nbsp; $C$: prior preferences &nbsp;&nbsp;•&nbsp;&nbsp; $p(o|C)$: preferred outcomes
+:::
+
+::: {.notes}
+Variational free energy handles inference about the present. For planning — choosing actions under uncertainty — Active Inference extends this to expected free energy, which evaluates policies by their anticipated consequences.
+
+The expected free energy $G$ parameterized by $\lambda$ for policy $\pi$ equals the risk under that policy minus $\lambda$ times the information gain about parameters $\theta$ from observing an outcome $o$.
+
+The decomposition shown here separates two components:
+
+- Risk is the KL divergence between the predicted outcome distribution and the agent's preferences. It measures how far expected outcomes are from desired outcomes.
+- Epistemic value is the mutual information between observations and model parameters. It measures how much the agent expects to learn.
+
+The $\lambda$ parameter weights the epistemic term.
+
+When $\lambda$ equals zero, the agent pursues only instrumental goals — minimizing risk, maximizing preferred outcomes.
+
+When $\lambda$ is positive, the agent trades off immediate performance against information gain.
+
+This is precisely the exchange rate Michie requested. The $\lambda$ parameter prices "information for future use" in the same units as "present expected gain." Different values of $\lambda$ yield different exploration-exploitation trade-offs, and my thesis tests this empirically.
+
+Note that the epistemic term enters with a negative sign because we minimize $G$ — more information gain reduces expected free energy, making information-seeking policies more attractive under minimization.
+:::

@@ -1,0 +1,79 @@
+## MENACE Implements Dirichlet-Categorical Inference
+
+:::: {.columns}
+
+::: {.column width="50%"}
+
+<span class="highlight">Matchbox State</span>
+
+$$\theta_s \sim \text{Dir}(\alpha_s)$$
+
+where $\alpha_s$ = bead counts
+
+:::
+
+::: {.column width="50%"}
+
+<span class="highlight">Action Selection</span>
+
+1. Bead counts → move probabilities (Dirichlet posterior predictive)
+2. Uniform bead draw = sample from $\text{Cat}(\alpha_s/\alpha_{s,0})$
+
+:::
+
+::::
+
+<span class="highlight">Posterior Predictive Probability Matching</span>
+
+Drawing a bead uniformly = sampling from the posterior predictive
+
+$$P(a|s) = E[\theta_{s,a}] = \frac{\alpha_{s,a}}{\alpha_{s,0}}$$
+
+<span class="highlight">Thesis contribution:</span> This mapping formalizes MENACE's implicit Bayesian structure.
+
+::: {.legend}
+$\theta_s$: move probability vector for state $s$ &nbsp;&nbsp;•&nbsp;&nbsp; $\alpha_s$: bead counts (Dirichlet parameters) &nbsp;&nbsp;•&nbsp;&nbsp; $\alpha_{s,0} = \sum_a \alpha_{s,a}$: total beads &nbsp;&nbsp;•&nbsp;&nbsp; $\text{Dir}$: Dirichlet distribution &nbsp;&nbsp;•&nbsp;&nbsp; $\text{Cat}$: categorical distribution
+:::
+
+::: {.notes}
+This slide establishes the core mathematical correspondence.
+
+Each matchbox can be viewed as maintaining a Dirichlet distribution over move probabilities, where the bead counts are the concentration parameters $\alpha$.
+
+What does it mean to draw a bead uniformly from the matchbox? In Bayesian terms, this is sampling from the posterior predictive distribution.
+
+The posterior predictive answers: "Given everything I've learned, what action should I take?" It integrates over all possible parameter values, weighted by how plausible they are.
+
+For the Dirichlet-categorical pair, this has a simple form: the probability of choosing action $a$ is just the proportion of beads — $\alpha_a / \alpha_0$. This is called probability matching: the agent's action probabilities directly reflect its learned beliefs.
+
+This is distinct from Thompson sampling — the standard Bayesian approach in bandit problems — which would draw a full parameter vector $\theta$ from the Dirichlet and then take the argmax.
+
+Probability matching naturally produces mixed strategies: actions are selected proportionally to their weights rather than always choosing the highest-weighted action. This matters in adversarial settings — a deterministic policy is predictable, allowing opponents to learn and counter it. Mixed strategies maintain unpredictability, which is why Nash equilibria in many games involve randomization.
+
+The Dirichlet-categorical pairing is significant because it is a conjugate pair: the posterior has the same functional form as the prior, just with updated parameters. This conjugacy is what makes MENACE's bead arithmetic a valid form of Bayesian updating — at least for positive reinforcement. Loss updates, which remove beads, are a heuristic rather than a literal Bayesian update.
+:::
+
+## Bayesian Updates Through Bead Manipulation
+
+Standard Bayesian update
+$$\text{Prior} + \text{Data} = \text{Posterior}$$
+
+In Dirichlet terms
+$$\text{Dir}(\alpha) + \text{observation} = \text{Dir}(\alpha + 1)$$
+
+MENACE's version
+$$\alpha_{s,a} \leftarrow \alpha_{s,a} + U(o)$$
+
+where $U(o) \in \{3, 1, -1\}$ is a utility-weighted pseudo-count update.
+
+Loss updates are a heuristic penalty/forgetting step, not a literal conjugate posterior.
+
+::: {.notes}
+This slide makes precise the sense in which MENACE's updates are "quasi-Bayesian." Standard Dirichlet-categorical conjugacy says that observing an outcome increments the corresponding count by one. MENACE's updates differ in two ways.
+
+First, the increments are weighted by utility: +3 for wins, +1 for draws. This is not standard Bayesian updating, but it can be interpreted as utility-weighted pseudo-count reinforcement — the agent effectively treats a win as stronger evidence than a draw.
+
+Second, and more importantly, loss updates remove beads. Strict Bayesian updating only adds evidence. There is no conjugate operation for "unlearning." The bead removal is a heuristic penalty that shifts probability away from moves that led to losses. Restocking — adding beads back when a matchbox empties — prevents the system from becoming stuck.
+
+My thesis characterizes this as "directionally aligned" with reducing instrumental risk: the updates push the policy toward preferred outcomes, even if they are not exact gradient steps of a variational objective. This qualification is important for the theoretical claims.
+:::

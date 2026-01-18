@@ -1,0 +1,84 @@
+## What is MENACE?
+
+:::: {.columns}
+
+::: {.column width="60%"}
+
+<span class="highlight">Physical Components</span>
+
+- 287 matchboxes (one per board position requiring a decision)
+- Colored beads (9 colors for 9 board positions)
+- Each bead represents a possible move
+
+<span class="highlight">Learning Mechanism</span>
+
+- Draw a bead → make that move
+- Win: add 3 beads of that color
+- Draw: add 1 bead
+- Loss: remove 1 bead
+
+:::
+
+::: {.column width="40%"}
+
+![](assets/menace-machine.jpg)
+
+:::
+
+::::
+
+<span class="highlight">The +3/+1/−1 values encode preferences over outcomes → map to Active Inference priors.</span>
+
+::: {.notes}
+MENACE comprises 287 matchboxes, each representing a canonical board position where it is the X's turn to move and a genuine decision must be made.
+
+Each matchbox contains colored beads — nine colors corresponding to the nine board positions. To select a move, a bead is drawn at random. The color indicates which square to play.
+
+The learning mechanism is simple: after each game, the operator revisits every matchbox that was used. If MENACE wins, three beads of the drawn color are added. If the game is a draw, one bead is added. If MENACE loses, one bead of that color is removed.
+
+The +3/+1/−1 reinforcement schedule is not arbitrary — these numbers encode preferences over outcomes. They determine how quickly the system converges and how it trades off different outcomes. As we will see, these preferences map directly to prior preferences in Active Inference.
+
+This physical transparency is precisely what makes MENACE valuable for theoretical analysis. Unlike neural networks or complex algorithms where the learning dynamics are opaque, every aspect of MENACE's state is directly observable. We can examine each matchbox, count every bead, and trace exactly how experience shapes behavior.
+
+This mechanism has a natural Bayesian interpretation that forms the core of my thesis. The bead counts are Dirichlet concentration parameters, and drawing a bead uniformly implements posterior predictive probability matching.
+
+I will develop this connection in Part II.
+:::
+
+## Reducing Complexity Through Symmetry
+
+:::: {.columns}
+
+::: {.column width="55%"}
+
+<span class="highlight">Without Symmetry</span>
+
+- 5,478 distinct legal positions
+- Impractical to build
+
+<span class="highlight">With Symmetry</span>
+
+- 8 symmetries (4 rotations × 2 reflections)
+- 765 canonical positions after symmetry reduction
+- 338 X-to-move → 304 (prune forced) → 287 (prune double-threats)
+- Manageable physical system
+
+:::
+
+::: {.column width="45%"}
+
+![](assets/symmetry-diagram.png){width=100%}
+
+:::
+
+::::
+
+::: {.notes}
+Symmetry reduction is essential for making MENACE physically constructible.
+
+Without it, there are thousands distinct legal board positions — far too many for a physical system. The Tic-Tac-Toe board has eight symmetries: four rotations and four reflections, forming the D4 dihedral group. Positions that differ only by symmetry are strategically equivalent, so they can share a single matchbox.
+
+After symmetry reduction, these 5,478 positions collapse to just 765 canonical positions. Restricting to X-to-move positions gives 338 states. Pruning forced moves — positions where only one legal move exists — yields 304 states.
+
+Michie's original design further removes 17 double-threat positions where the outcome is already determined, yielding the final 287 states — the minimal representation of genuine decision points in the game.
+:::

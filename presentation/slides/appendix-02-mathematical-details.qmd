@@ -1,0 +1,143 @@
+## A2: Dirichlet-Categorical Conjugacy Proof
+
+<span class="highlight">Theorem:</span> If $\theta \sim \text{Dir}(\alpha)$ and $n$ outcomes are observed, then:
+$$\theta|\text{data} \sim \text{Dir}(\alpha + n)$$
+
+<span class="highlight">Proof:</span>
+
+$$
+\begin{align}
+p(\theta|\text{data}) &\propto p(\text{data}|\theta)p(\theta) \\
+&= \prod_{i=1}^{k} \theta_i^{n_i} \cdot \frac{1}{B(\alpha)} \prod_{i=1}^{k} \theta_i^{\alpha_i-1} \\
+&\propto \prod_{i=1}^{k} \theta_i^{\alpha_i + n_i - 1}
+\end{align}
+$$
+
+This is the kernel of $\text{Dir}(\alpha + n)$ ∎
+
+::: {.notes}
+If $\theta$ is drawn from a Dirichlet with parameters $\alpha$, and $n$ outcomes are observed, then $\theta$ given data is Dirichlet with parameters $\alpha$ plus $n$.
+
+This proof shows why MENACE's bead-updating mechanism is mathematically elegant.
+
+The Dirichlet-categorical conjugacy means that starting with a Dirichlet prior (initial bead counts) and observing categorical data (game outcomes), the posterior is also Dirichlet with updated parameters.
+
+In MENACE's context:
+
+- The initial bead counts $\alpha$ represent prior beliefs about which moves are good
+- Each game outcome adds evidence: winning adds to the count for moves that led to victory
+- Win/draw increments are additive evidence; loss decrements are a heuristic/forgetting step
+- The posterior $\text{Dir}(\alpha + n)$ is the updated belief after incorporating this evidence
+
+The key property is that updating only requires adding integers — no complex calculations needed. This is why Michie could implement Bayesian inference with physical beads: the mathematics naturally maps to counting operations.
+
+This conjugacy is not a coincidence but reflects a deep connection between counting and probability. The Dirichlet distribution is the natural prior for categorical probabilities precisely because it makes updating trivial through simple addition.
+:::
+
+## A3: Posterior Predictive Probability Matching
+
+<span class="highlight">Theorem:</span> Drawing beads = posterior predictive probability matching.
+
+<span class="highlight">Proof:</span> For a Dirichlet--categorical model,
+
+$$P(a) = \int \theta_a \cdot \text{Dir}(\theta; \alpha) \, d\theta = \frac{\alpha_a}{\sum_i \alpha_i}$$
+
+MENACE's probability
+$$P(a) = \frac{\text{# beads of color } a}{\text{total beads}} = \frac{\alpha_a}{\sum_i \alpha_i}$$
+
+Identical ∎
+
+::: {.legend}
+$P(a)$: probability of action $a$ &nbsp;&nbsp;•&nbsp;&nbsp; $\theta_a$: move probability for action $a$ &nbsp;&nbsp;•&nbsp;&nbsp; $\text{Dir}(\theta; \alpha)$: Dirichlet distribution &nbsp;&nbsp;•&nbsp;&nbsp; $\alpha_a$: bead count for action $a$ &nbsp;&nbsp;•&nbsp;&nbsp; $\sum_i \alpha_i$: total beads
+:::
+
+::: {.notes}
+The probability of action $a$ equals the integral of $\theta_a$ times the Dirichlet density, which equals $\alpha_a$ over the sum of all alphas.
+
+MENACE samples directly from the posterior predictive distribution (the Dirichlet mean). This is probability matching, not canonical Thompson sampling.
+
+Thompson sampling would first sample $\theta \sim \text{Dir}(\alpha)$ and then take $\arg\max_a \theta_a$. MENACE instead samples actions in proportion to $\alpha/\alpha_0$, which naturally implements mixed strategies.
+:::
+
+## A4: Dirichlet--Categorical Mutual Information
+
+Epistemic value in the thesis is the mutual information between observations and parameters.
+
+$$I(o;\theta) = H\!\left[\text{Cat}\!\left(\frac{\alpha}{\alpha_0}\right)\right] - \left[\psi(\alpha_0 + 1) - \sum_i \frac{\alpha_i}{\alpha_0} \psi(\alpha_i + 1)\right]$$
+
+Equivalent form:
+
+$$I(o;\theta) = \sum_i \frac{\alpha_i}{\alpha_0}\!\left[\psi(\alpha_i{+}1)-\psi(\alpha_0{+}1)-\ln\!\frac{\alpha_i}{\alpha_0}\right] \ge 0$$
+
+As total concentration $\alpha_0$ becomes large, $I(o;\theta) \to 0$.
+
+::: {.legend}
+$I(o;\theta)$: mutual information &nbsp;&nbsp;•&nbsp;&nbsp; $o$: observation (action or outcome) &nbsp;&nbsp;•&nbsp;&nbsp; $\theta \sim \text{Dir}(\alpha)$: probability vector &nbsp;&nbsp;•&nbsp;&nbsp; $\alpha_i$: concentration parameter for category $i$ &nbsp;&nbsp;•&nbsp;&nbsp; $\alpha_0 = \sum_i \alpha_i$: total concentration &nbsp;&nbsp;•&nbsp;&nbsp; $\psi$: digamma function &nbsp;&nbsp;•&nbsp;&nbsp; $H$: entropy
+:::
+
+::: {.notes}
+The mutual information between observations $o$ and parameters $\theta$ equals the entropy of the categorical distribution minus the expected conditional entropy, expressed using digamma functions $\psi$.
+
+This formula quantifies epistemic value — how much observing a sample from the categorical distribution reveals about the underlying parameters. In MENACE's context, $o$ can be either an action selection (at the matchbox level) or a game outcome (at the trajectory level), depending on what Dirichlet is being queried.
+
+The first form decomposes mutual information as entropy minus conditional entropy. The term $H[\text{Cat}(\alpha/\alpha_0)]$ is the entropy of the posterior predictive categorical distribution (uncertainty about the next observation). The bracketed term is the expected entropy of the likelihood given the parameters.
+
+The equivalent form makes the non-negativity explicit. Each term in the sum is non-negative because the digamma function satisfies $\psi(x+1) - \psi(y+1) \geq \ln(x/y)$ when $x \leq y$.
+
+The key insight: as concentration $\alpha_0$ grows, mutual information shrinks toward zero. With high concentration (high confidence), the probabilities are already well-estimated — observing another sample teaches little. With low concentration (high uncertainty), each observation is highly informative.
+
+This explains why epistemic value matters early in learning but diminishes over time. An agent that weights epistemic value highly will explore more when uncertain, then naturally transition to exploitation as beliefs consolidate.
+:::
+
+## A5: Deriving Variational Free Energy
+
+<span class="highlight">Goal:</span> Approximate intractable posterior $p(s|o)$ with tractable $q(s|o)$.
+
+$$
+\begin{align}
+D_{KL}[q(s|o) \| p(s|o)] &= \mathbb{E}_q\left[\ln q(s|o) - \ln \frac{p(o|s)p(s)}{p(o)}\right] \\
+&= \mathbb{E}_q[\ln q(s|o) - \ln p(o|s) - \ln p(s)] + \ln p(o) \\
+&= \underbrace{D_{KL}[q(s|o) \| p(s)] - \mathbb{E}_q[\ln p(o|s)]}_{F \;=\; \text{Free Energy}} + \ln p(o)
+\end{align}
+$$
+
+Since $D_{KL} \geq 0$: $\quad F \geq -\ln p(o) = \text{Surprise}$
+
+<span class="highlight">Key insight:</span> Minimizing $F$ simultaneously approximates the posterior and bounds surprise.
+
+::: {.legend}
+$q(s|o)$: approximate posterior &nbsp;&nbsp;•&nbsp;&nbsp; $p(s|o)$: true posterior &nbsp;&nbsp;•&nbsp;&nbsp; $p(o)$: evidence/marginal likelihood &nbsp;&nbsp;•&nbsp;&nbsp; $F$: variational free energy
+:::
+
+::: {.notes}
+This derivation shows how variational free energy arises from trying to minimize KL divergence between an approximate posterior and the true posterior.
+
+Starting with the KL divergence definition and applying Bayes' rule to expand $p(s|o)$, we can rearrange terms to isolate what we call free energy.
+
+The key insight is that since KL divergence is always non-negative, free energy is always an upper bound on surprise (negative log evidence). Minimizing free energy therefore accomplishes two things simultaneously: it makes the approximate posterior closer to the true posterior, and it minimizes surprise about observations.
+
+This is the mathematical foundation for why Active Inference agents minimize free energy — it is a tractable proxy for minimizing surprise while performing approximate Bayesian inference.
+:::
+
+## A6: Three Equivalent Forms of Free Energy
+
+<span class="highlight">Energy − Entropy:</span> Fit data while maintaining uncertainty
+$$F = \underbrace{-\mathbb{E}_q[\ln p(o,s)]}_{\text{Energy}} + \underbrace{H[q(s \mid o)]}_{\text{Entropy}}$$
+
+<span class="highlight">Complexity − Accuracy:</span> Simple models that explain data well
+$$F = \underbrace{D_{KL}[q \parallel p(s)]}_{\text{Complexity}} - \underbrace{\mathbb{E}_q[\ln p(o \mid s)]}_{\text{Accuracy}}$$
+
+<span class="highlight">Divergence + Surprise:</span> Approximate inference while minimizing surprise
+$$F = \underbrace{D_{KL}[q \parallel p(s \mid o)]}_{\text{Divergence}} + \underbrace{(-\ln p(o))}_{\text{Surprise}}$$
+
+::: {.notes}
+These three formulations of variational free energy are mathematically equivalent but emphasize different aspects of the optimization.
+
+The Energy-Entropy form comes from statistical mechanics and shows the balance between fitting observations (low energy) and maintaining appropriate uncertainty (high entropy).
+
+The Complexity-Accuracy form is common in machine learning. Complexity penalizes posteriors that deviate from the prior, while accuracy rewards explaining the data. This is the form used in variational autoencoders.
+
+The Divergence-Surprise form most directly connects to Active Inference. It shows that free energy equals the gap between approximate and true posteriors plus surprise. When the approximate posterior equals the true posterior, free energy equals surprise exactly.
+
+For MENACE and Active Inference, the Complexity-Accuracy form is most relevant: risk corresponds to the accuracy term (achieving preferred outcomes), while the Dirichlet prior provides implicit complexity regularization.
+:::

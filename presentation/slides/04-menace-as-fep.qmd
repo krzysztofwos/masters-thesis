@@ -1,0 +1,67 @@
+## MENACE's Implicit Generative Model
+
+What MENACE "believes"
+
+$$p(o, s_{0:T}, a_{0:T}) = p(o|s_T) \prod_{t} p(s_{t+1}|s_t, a_t) p(a_t|s_t)$$
+
+where:
+
+- $p(o|s_T)$: Outcome model — final position determines outcome (deterministic)
+- $p(s_{t+1}|s_t, a_t)$: Transition model — game rules (fixed)
+- $p(a_t|s_t)$: Policy to learn (the beads)
+
+All of MENACE's learning focuses on optimizing the policy component.
+
+::: {.legend}
+$o$: outcome &nbsp;&nbsp;•&nbsp;&nbsp; $s_t$: state at time $t$ &nbsp;&nbsp;•&nbsp;&nbsp; $a_t$: action at time $t$ &nbsp;&nbsp;•&nbsp;&nbsp; $T$: terminal time &nbsp;&nbsp;•&nbsp;&nbsp; $p(o|s_T)$: outcome model &nbsp;&nbsp;•&nbsp;&nbsp; $p(s_{t+1}|s_t,a_t)$: transition model &nbsp;&nbsp;•&nbsp;&nbsp; $p(a_t|s_t)$: policy
+:::
+
+::: {.notes}
+To apply Active Inference to MENACE, we must specify its implicit generative model — the probabilistic model of how games unfold. This factorization has three components.
+
+First, the outcome model $p(o|s_T)$: terminal board positions deterministically map to outcomes. MENACE encodes this implicitly — reinforcement is applied based on game results, so the system "knows" which positions are winning, losing, or drawing.
+
+Second, the transition model $p(s_{t+1}|s_t, a_t)$: the rules of Tic-Tac-Toe. These are fixed and encoded in how the human operator uses the system — the operator opens the matchbox corresponding to the current board state, so transitions are handled externally.
+
+Third, the policy $p(a_t|s_t)$: this is what the beads represent. Each matchbox encodes MENACE's beliefs about which moves are preferable in that position.
+
+All of MENACE's learning focuses on the policy component. The game rules and outcome mappings are fixed. Only the action preferences change.
+
+This factorization is the same structure used by modern reinforcement learning algorithms, but implemented in physical hardware.
+:::
+
+## Preference-Weighted Policy Shaping
+
+MENACE corresponds to the instrumental objective
+
+$$G_\lambda(\pi) = \mathrm{Risk}(\pi) - \lambda I(o;\theta), \quad \lambda = 0$$
+
+- Preferences are encoded by $U(o) \in \{+3,+1,-1\}$
+- Bead updates shift Dirichlet counts toward preferred outcomes
+- Negative updates are heuristic penalties; restocking keeps $\alpha_{s,a} > 0$
+
+The update is directionally aligned with reducing instrumental risk, not an exact gradient step.
+
+<span class="highlight">Thesis contribution:</span> This model is instantiated for MENACE and Tic-Tac-Toe, with explicit computation of all quantities.
+
+::: {.legend}
+$G_\lambda(\pi)$: expected free energy &nbsp;&nbsp;•&nbsp;&nbsp; $\pi$: policy &nbsp;&nbsp;•&nbsp;&nbsp; $o$: outcome &nbsp;&nbsp;•&nbsp;&nbsp; $\theta$: model parameters (bead proportions) &nbsp;&nbsp;•&nbsp;&nbsp; $I(o;\theta)$: information gain about $\theta$ from $o$ &nbsp;&nbsp;•&nbsp;&nbsp; $U(o)$: utility &nbsp;&nbsp;•&nbsp;&nbsp; $\alpha_{s,a}$: bead count
+:::
+
+::: {.notes}
+**Reading the equation:** "The expected free energy G sub lambda for policy pi equals the risk under that policy minus lambda times information gain, where lambda equals zero — so only the risk term remains."
+
+This slide states the central theoretical claim. MENACE corresponds to the instrumental special case of expected free energy minimization — that is, $\lambda$ equals zero, with no explicit epistemic drive.
+
+The preferences encoded by the reinforcement schedule (+3/+1/-1) map to the prior preference distribution $p(o|C)$ in the Active Inference formulation. Bead updates shift Dirichlet parameters toward outcomes with higher utility, which is directionally aligned with reducing the risk term — the KL divergence between predicted and preferred outcomes.
+
+Three important caveats qualify this claim.
+
+First, the update is directionally aligned with reducing risk, not an exact gradient step of a variational objective.
+
+Second, loss updates (removing beads) are heuristic rather than conjugate Bayesian updates.
+
+Third, restocking — adding beads back when matchboxes empty — is a practical mechanism without a clean theoretical interpretation.
+
+Despite these caveats, my thesis contribution is to make this correspondence concrete: I instantiate this Active Inference model for MENACE and Tic-Tac-Toe, computing all quantities explicitly. This allows empirical testing of whether the theoretical correspondence holds in practice.
+:::

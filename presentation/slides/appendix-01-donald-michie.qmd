@@ -1,0 +1,43 @@
+## A1: Donald Michie (1923-2007)
+
+:::: {.columns}
+
+::: {.column width="30%"}
+
+<img src="assets/donald-michie-1.jpg" alt="Donald Michie" style="width:100%;" />
+
+:::
+
+::: {.column width="35%"}
+
+<span class="highlight">The Pioneer Behind MENACE</span>
+
+- Codebreaker at Bletchley Park during WWII
+- Worked alongside Alan Turing on Colossus
+- MA, DPhil, DSc in biological sciences (Oxford)
+- Professor of Machine Intelligence, Edinburgh
+
+<span class="highlight">Key insight:</span> "Programming human intelligence into machines" — inspired by wartime cryptanalysis.
+
+:::
+
+::: {.column width="35%"}
+
+<span class="highlight">Contributions to AI</span>
+
+- Founded Edinburgh's Machine Intelligence unit
+- Editor-in-Chief, "Machine Intelligence" series
+- Developed machine learning into "industrial-strength tool"
+- 1996 Feigenbaum Medal for ML applications
+
+<span class="highlight">MENACE (1961):</span> Physical demonstration that learning could be mechanized.
+
+:::
+
+::::
+
+::: {.notes}
+Donald Michie was a polymath who bridged biology, computing, and artificial intelligence. His wartime experience at Bletchley Park, working alongside Alan Turing on Colossus, convinced him that machines could exhibit intelligent behavior through systematic processes.
+
+MENACE — the Machine Educable Noughts And Crosses Engine — was Michie's 1961 demonstration that learning could emerge from simple mechanical operations: matchboxes, colored beads, and a reinforcement rule.
+:::

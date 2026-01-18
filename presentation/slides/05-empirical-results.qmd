@@ -1,0 +1,115 @@
+## Experimental Setup
+
+:::: {.columns}
+
+::: {.column width="50%"}
+
+<span class="highlight">Agents Compared</span>
+
+- MENACE (Michie filter, box restock)
+- Instrumental AIF ($\lambda = 0$)
+- Hybrid AIF ($\lambda = 0.5$)
+- Pure AIF ($\lambda \in \{0, 0.25, 0.5\}$)
+- Q-Learning / SARSA baselines
+
+:::
+
+::: {.column width="50%"}
+
+<span class="highlight">Protocol</span>
+
+- Training: 500 games (5,000 for RL)
+- Validation: 100 games vs. optimal
+- Seeds: 10 independent runs
+- State filters: Michie (287 states)
+- MENACE curriculum: mixed; AIF baseline: optimal-only
+
+:::
+
+::::
+
+<span class="highlight">Thesis contribution:</span> First systematic empirical comparison of MENACE against Active Inference variants.
+
+::: {.notes}
+The theoretical correspondence makes testable predictions. If MENACE corresponds to instrumental Active Inference with $\lambda = 0$, then an explicit Active Inference agent with $\lambda = 0$ should achieve similar performance.
+
+The experiments compare five agent types:
+
+- MENACE with Michie's original 287-state filter and box-level restocking
+- Instrumental Active Inference with $\lambda = 0$
+- Hybrid Active Inference, which combines MENACE-style Dirichlet updates with EFE-based action selection
+- Pure Active Inference, which uses EFE for both learning and action selection without the Dirichlet machinery
+- Tabular Reinforcement Learning baselines: Q-learning and SARSA
+
+Both Hybrid and Pure variants are tested with positive $\lambda$ values to add explicit epistemic drive. Tabular RL baselines serve as reference points from the reinforcement learning literature.
+
+SARSA (State-Action-Reward-State-Action) is on-policy temporal difference control: it updates Q-values using the action actually taken next, whereas Q-learning is off-policy and updates using the maximum over next actions.
+
+All agents are trained for 500 games, except RL baselines which receive 5,000 games for asymptotic comparison. Post-training validation uses 100 games against optimal play. Results aggregate over 10 independent seeds.
+
+One methodological note: MENACE uses a mixed curriculum — starting against random opponents and progressing to optimal — while the AIF baseline trains directly against optimal. This means training trajectories are not directly comparable, but post-training validation against the same opponent provides the fair comparison point.
+:::
+
+## Key Finding 1: Instrumental Equivalence
+
+| Algorithm                      | Draw Rate (%)  | Loss Rate (%)  |
+| ------------------------------ | :------------: | :------------: |
+| MENACE (box restock)           | $84.5 \pm 8.1$ | $15.5 \pm 8.1$ |
+| Instrumental AIF ($\lambda=0$) | $88.1 \pm 3.9$ | $11.9 \pm 3.9$ |
+
+- When $\lambda = 0$, the EFE-based policy reduces to a purely instrumental objective, closely matching MENACE's pseudo-count reinforcement
+- However, MENACE has implicit exploration: low concentration → high variance → naturally exploratory early behavior
+
+<span class="highlight">Result:</span> MENACE ≈ Instrumental Active Inference.
+
+::: {.notes}
+The first key finding tests the central theoretical claim: does MENACE correspond to instrumental Active Inference?
+
+MENACE achieves 84.5% draw rate; Instrumental AIF with $\lambda = 0$ achieves 88.1%. Overlapping confidence intervals support the correspondence — both optimize approximately the same objective.
+
+Residual differences come from implementation details. Note that MENACE has implicit exploration via the Dirichlet: low concentration means high variance, which diminishes as beliefs consolidate.
+:::
+
+## Key Finding 2: The Value of Information
+
+| Algorithm                   | Draw Rate (%)  |
+| --------------------------- | :------------: |
+| Pure AIF ($\lambda = 0.0$)  | $79.7 \pm 6.5$ |
+| Pure AIF ($\lambda = 0.25$) | $79.1 \pm 4.8$ |
+| Pure AIF ($\lambda = 0.5$)  | $77.0 \pm 3.7$ |
+
+<span class="highlight">Paradox:</span> Epistemic variants ($\lambda > 0$) do NOT outperform instrumental baseline ($\lambda=0$) within 500 games.
+
+<span class="highlight">Resolution:</span> This reflects Michie's trade-off in practice: "acquisition of information for future use _at the expense of present expected gain_".
+
+::: {.notes}
+The second finding addresses Michie's original question: what is the cost of information?
+
+Higher $\lambda$ means lower short-term performance: 79.7% at $\lambda = 0$ down to 77.0% at $\lambda = 0.5$. This confirms Michie's prediction — information has value for future decisions, but acquiring it costs immediate performance.
+
+This quantifies the trade-off: explicit epistemic value has a measurable short-horizon cost.
+:::
+
+## Key Finding 3: Robustness vs. Specialization
+
+| Algorithm  | Training  |       Draw Rate (%)       |
+| ---------- | --------- | :-----------------------: |
+| Q-learning | random    | $98.0 \pm \phantom{0}1.2$ |
+| Q-learning | defensive |      $10.2 \pm 30.9$      |
+| SARSA      | random    | $97.9 \pm \phantom{0}1.9$ |
+| SARSA      | defensive |      $20.5 \pm 40.3$      |
+
+- Box-level restocking preserves full support
+- Provides implicit "insurance" against distributional shift
+- Q-learning can drive Q-values to extremes, zeroing out actions
+- MENACE achieves competitive performance with 10× fewer games
+
+<span class="highlight">Dirichlet advantage:</span> MENACE keeps all action probabilities strictly positive.
+
+::: {.notes}
+The third finding compares MENACE's robustness against tabular RL baselines.
+
+RL achieves 98% when training and evaluation match, but collapses under distribution shift — Q-learning trained on defensive drops to 10% against optimal. MENACE's restocking ensures all actions keep positive probability, providing implicit regularization.
+
+Also note sample efficiency: MENACE achieves competitive performance with 500 games versus 5,000 for RL.
+:::
