@@ -1,0 +1,29 @@
+name: Publish Presentation to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "presentation/**"
+      - ".github/workflows/publish-presentation.yml"
+  workflow_dispatch: # Allow manual trigger
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Quarto
+        uses: quarto-dev/quarto-actions/setup@v2
+
+      - name: Render and Publish to GitHub Pages
+        uses: quarto-dev/quarto-actions/publish@v2
+        with:
+          target: gh-pages
+          path: presentation
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
