@@ -6,8 +6,8 @@
 <script src="site_libs/quarto-html/tippy.umd.min.js"></script>
 <link href="site_libs/quarto-html/tippy.css" rel="stylesheet">
 <link href="site_libs/quarto-html/light-border.css" rel="stylesheet">
-<link href="site_libs/quarto-html/quarto-syntax-highlighting-dark-befe23ebd2f54d8af2c8a89d1a1611f1.css" rel="stylesheet" id="quarto-text-highlighting-styles"><meta charset="utf-8">
-  <meta name="generator" content="quarto-1.7.34">
+<link href="site_libs/quarto-html/quarto-syntax-highlighting-dark-4d9afe2b8d18ee9fa5d0d57b5ed4214d.css" rel="stylesheet" id="quarto-text-highlighting-styles"><meta charset="utf-8">
+  <meta name="generator" content="quarto-1.8.27">
 
   <meta name="author" content="Krzysztof Woś">
   <meta name="dcterms.date" content="2026-01-23">
@@ -30,7 +30,7 @@
       vertical-align: middle;
     }
   </style>
-  <link rel="stylesheet" href="site_libs/revealjs/dist/theme/quarto-435f87ca30fd505a0374d1b057c899e8.css">
+  <link rel="stylesheet" href="site_libs/revealjs/dist/theme/quarto-8fef25ee19dfeb1f1598916854d9bf76.css">
   <link href="site_libs/revealjs/plugin/quarto-line-highlight/line-highlight.css" rel="stylesheet">
   <link href="site_libs/revealjs/plugin/reveal-menu/menu.css" rel="stylesheet">
   <link href="site_libs/revealjs/plugin/reveal-menu/quarto-menu.css" rel="stylesheet">
@@ -936,40 +936,9 @@ D_{KL}[q(s|o) \| p(s|o)] &amp;= \mathbb{E}_q\left[\ln q(s|o) - \ln \frac{p(o|s)p
 </section>
 <section id="a6-three-equivalent-forms-of-free-energy" class="slide level2">
 <h2>A6: Three Equivalent Forms of Free Energy</h2>
-<div class="white-math">
-<table class="caption-top">
-<colgroup>
-<col style="width: 14%">
-<col style="width: 85%">
-</colgroup>
-<thead>
-<tr class="header">
-<th>Form</th>
-<th>Equation</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td>Energy − Entropy</td>
-<td><span class="math inline">\(F = \underbrace{-\mathbb{E}_q[\ln p(o,s)]}_{\text{Energy}} + \underbrace{H[q(s \mid o)]}_{\text{Entropy}}\)</span></td>
-</tr>
-<tr class="even">
-<td>Complexity − Accuracy</td>
-<td><span class="math inline">\(F = \underbrace{D_{KL}[q \parallel p(s)]}_{\text{Complexity}} - \underbrace{\mathbb{E}_q[\ln p(o \mid s)]}_{\text{Accuracy}}\)</span></td>
-</tr>
-<tr class="odd">
-<td>Divergence + Surprise</td>
-<td><span class="math inline">\(F = \underbrace{D_{KL}[q \parallel p(s \mid o)]}_{\text{Divergence}} + \underbrace{(-\ln p(o))}_{\text{Surprise}}\)</span></td>
-</tr>
-</tbody>
-</table>
-</div>
-<p>Each form highlights a different trade-off:</p>
-<ul>
-<li><span class="highlight">Energy−Entropy:</span> Fit data while maintaining uncertainty</li>
-<li><span class="highlight">Complexity−Accuracy:</span> Simple models that explain data well</li>
-<li><span class="highlight">Divergence+Surprise:</span> Approximate inference while minimizing surprise</li>
-</ul>
+<p><span class="highlight">Energy − Entropy:</span> Fit data while maintaining uncertainty <span class="math display">\[F = \underbrace{-\mathbb{E}_q[\ln p(o,s)]}_{\text{Energy}} + \underbrace{H[q(s \mid o)]}_{\text{Entropy}}\]</span></p>
+<p><span class="highlight">Complexity − Accuracy:</span> Simple models that explain data well <span class="math display">\[F = \underbrace{D_{KL}[q \parallel p(s)]}_{\text{Complexity}} - \underbrace{\mathbb{E}_q[\ln p(o \mid s)]}_{\text{Accuracy}}\]</span></p>
+<p><span class="highlight">Divergence + Surprise:</span> Approximate inference while minimizing surprise <span class="math display">\[F = \underbrace{D_{KL}[q \parallel p(s \mid o)]}_{\text{Divergence}} + \underbrace{(-\ln p(o))}_{\text{Surprise}}\]</span></p>
 <aside class="notes">
 <p>These three formulations of variational free energy are mathematically equivalent but emphasize different aspects of the optimization.</p>
 <p>The Energy-Entropy form comes from statistical mechanics and shows the balance between fitting observations (low energy) and maintaining appropriate uncertainty (high entropy).</p>
@@ -1253,13 +1222,14 @@ D_{KL}[q(s|o) \| p(s|o)] &amp;= \mathbb{E}_q\left[\ln q(s|o) - \ln \frac{p(o|s)p
           e.clearSelection();
         }
         const getTextToCopy = function(trigger) {
-            const codeEl = trigger.previousElementSibling.cloneNode(true);
-            for (const childEl of codeEl.children) {
-              if (isCodeAnnotation(childEl)) {
-                childEl.remove();
-              }
+          const outerScaffold = trigger.parentElement.cloneNode(true);
+          const codeEl = outerScaffold.querySelector('code');
+          for (const childEl of codeEl.children) {
+            if (isCodeAnnotation(childEl)) {
+              childEl.remove();
             }
-            return codeEl.innerText;
+          }
+          return codeEl.innerText;
         }
         const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
           text: getTextToCopy

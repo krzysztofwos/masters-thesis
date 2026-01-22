@@ -2,7 +2,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
 
 <meta charset="utf-8">
-<meta name="generator" content="quarto-1.7.34">
+<meta name="generator" content="quarto-1.8.27">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
@@ -31,14 +31,15 @@ ul.task-list li input[type="checkbox"] {
 <meta name="quarto:offset" content="../">
 <script src="../site_libs/quarto-html/quarto.js" type="module"></script>
 <script src="../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="../site_libs/quarto-html/axe/axe-check.js" type="module"></script>
 <script src="../site_libs/quarto-html/popper.min.js"></script>
 <script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
 <script src="../site_libs/quarto-html/anchor.min.js"></script>
 <link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
-<link href="../site_libs/quarto-html/quarto-syntax-highlighting-c8ad9e5dbd60b7b70b38521ab19b7da4.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-ed96de9b727972fe78a7b5d16c58bf87.css" rel="stylesheet" id="quarto-text-highlighting-styles">
 <script src="../site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="../site_libs/bootstrap/bootstrap-a14e3238c51140e99ccc48519b6ed9ce.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<link href="../site_libs/bootstrap/bootstrap-8fd1faf6fd93e4e6d207ae0f9db51d78.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
 <script id="quarto-search-options" type="application/json">{
   "location": "sidebar",
   "copy-button": false,
@@ -81,7 +82,7 @@ const typesetMath = (el) => {
     var macros = [];
     for (var i = 0; i < mathElements.length; i++) {
       var texText = mathElements[i].firstChild;
-      if (mathElements[i].tagName == "SPAN") {
+      if (mathElements[i].tagName == "SPAN" && texText && texText.data) {
         window.katex.render(texText.data, mathElements[i], {
           displayMode: mathElements[i].classList.contains('display'),
           throwOnError: false,
@@ -199,40 +200,9 @@ D_{KL}[q(s|o) \| p(s|o)] &amp;= \mathbb{E}_q\left[\ln q(s|o) - \ln \frac{p(o|s)p
 </section>
 <section id="a6-three-equivalent-forms-of-free-energy" class="level2">
 <h2 class="anchored" data-anchor-id="a6-three-equivalent-forms-of-free-energy">A6: Three Equivalent Forms of Free Energy</h2>
-<div class="white-math">
-<table class="caption-top table">
-<colgroup>
-<col style="width: 14%">
-<col style="width: 85%">
-</colgroup>
-<thead>
-<tr class="header">
-<th>Form</th>
-<th>Equation</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td>Energy − Entropy</td>
-<td><span class="math inline">\(F = \underbrace{-\mathbb{E}_q[\ln p(o,s)]}_{\text{Energy}} + \underbrace{H[q(s \mid o)]}_{\text{Entropy}}\)</span></td>
-</tr>
-<tr class="even">
-<td>Complexity − Accuracy</td>
-<td><span class="math inline">\(F = \underbrace{D_{KL}[q \parallel p(s)]}_{\text{Complexity}} - \underbrace{\mathbb{E}_q[\ln p(o \mid s)]}_{\text{Accuracy}}\)</span></td>
-</tr>
-<tr class="odd">
-<td>Divergence + Surprise</td>
-<td><span class="math inline">\(F = \underbrace{D_{KL}[q \parallel p(s \mid o)]}_{\text{Divergence}} + \underbrace{(-\ln p(o))}_{\text{Surprise}}\)</span></td>
-</tr>
-</tbody>
-</table>
-</div>
-<p>Each form highlights a different trade-off:</p>
-<ul>
-<li><span class="highlight">Energy−Entropy:</span> Fit data while maintaining uncertainty</li>
-<li><span class="highlight">Complexity−Accuracy:</span> Simple models that explain data well</li>
-<li><span class="highlight">Divergence+Surprise:</span> Approximate inference while minimizing surprise</li>
-</ul>
+<p><span class="highlight">Energy − Entropy:</span> Fit data while maintaining uncertainty <span class="math display">\[F = \underbrace{-\mathbb{E}_q[\ln p(o,s)]}_{\text{Energy}} + \underbrace{H[q(s \mid o)]}_{\text{Entropy}}\]</span></p>
+<p><span class="highlight">Complexity − Accuracy:</span> Simple models that explain data well <span class="math display">\[F = \underbrace{D_{KL}[q \parallel p(s)]}_{\text{Complexity}} - \underbrace{\mathbb{E}_q[\ln p(o \mid s)]}_{\text{Accuracy}}\]</span></p>
+<p><span class="highlight">Divergence + Surprise:</span> Approximate inference while minimizing surprise <span class="math display">\[F = \underbrace{D_{KL}[q \parallel p(s \mid o)]}_{\text{Divergence}} + \underbrace{(-\ln p(o))}_{\text{Surprise}}\]</span></p>
 <div class="notes">
 <p>These three formulations of variational free energy are mathematically equivalent but emphasize different aspects of the optimization.</p>
 <p>The Energy-Entropy form comes from statistical mechanics and shows the balance between fitting observations (low energy) and maintaining appropriate uncertainty (high entropy).</p>
@@ -296,13 +266,14 @@ D_{KL}[q(s|o) \| p(s|o)] &amp;= \mathbb{E}_q\left[\ln q(s|o) - \ln \frac{p(o|s)p
       e.clearSelection();
     }
     const getTextToCopy = function(trigger) {
-        const codeEl = trigger.previousElementSibling.cloneNode(true);
-        for (const childEl of codeEl.children) {
-          if (isCodeAnnotation(childEl)) {
-            childEl.remove();
-          }
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
         }
-        return codeEl.innerText;
+      }
+      return codeEl.innerText;
     }
     const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
       text: getTextToCopy
